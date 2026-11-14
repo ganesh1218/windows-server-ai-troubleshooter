@@ -19,13 +19,15 @@ npm.cmd ci
 npm.cmd run build
 ```
 
-Start the local application:
+For real servers, double-click **Start-HealthCheck.cmd** in this folder. It opens the real application at **http://127.0.0.1:8000/** and establishes the local browser session automatically. Keep that terminal open while using the app. The public website is not the address to use for your infrastructure.
+
+Alternatively, start the local application:
 
 ```powershell
 .\.venv\Scripts\python.exe -m backend.app
 ```
 
-Open **http://127.0.0.1:8000/?local=1**. In **Connect to a server**, enter the local session token printed in the terminal, your server name or IP, and a Windows account/password with remote diagnostic permissions. Click **Connect & check health**. The app immediately collects fresh details and displays CPU, RAM, all drives, RDP, patches, services, events and reboot evidence. A run can take up to 180 seconds. Connection failures and partial collection are explicitly reported.
+Open **http://127.0.0.1:8000/**. In **Connect to a server**, enter your real server name or IP, and a Windows account/password with remote diagnostic permissions. Click **Connect & check health**. The app immediately collects fresh details and displays CPU, RAM, all drives, RDP, patches, services, events and reboot evidence. A run can take up to 180 seconds. Connection failures and partial collection are explicitly reported. The workstation must have network/VPN access to the target server; this setup does not establish that access or configure the remote server.
 
 WinRM HTTPS (5986) is selected by default. Clear the checkbox only for domain-managed WinRM/Negotiate (5985) on your trusted management network. The collector tries WinRM first, then WMI/DCOM. IP-based WinRM authentication may require an appropriately configured HTTPS listener/certificate; prefer a domain hostname for Kerberos. Do not disable certificate validation, broaden TrustedHosts, enable Basic authentication, or expose management ports to the internet to make a connection work. Execution policy must permit the included scripts under your organization's policy; the app does not bypass it.
 

@@ -37,6 +37,14 @@ def test_empty_report_directory(tmp_path, monkeypatch):
 def test_health_endpoint():
     assert client.get('/api/health').json()=={'status':'ok','mode':'local','application':'Server Health Check'}
 
+def test_local_dashboard_bootstraps_session_without_url_token():
+    response=client.get('/')
+    assert response.status_code==200
+    assert 'name="serverscope-session"' in response.text
+    assert module.TOKEN in response.text
+    assert response.headers['cache-control']=='no-store'
+    assert client.get('/',headers={'Origin':'https://evil.example'}).status_code==403
+
 def test_no_remote_execution_route():
     assert client.post('/api/collect',headers=headers,json={'computer':'server'}).status_code==404
 

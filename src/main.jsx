@@ -5,7 +5,8 @@ import {samples} from './sample';
 import {sortedDrives,percentUsed,findings,healthChecks} from './model';
 import './style.css';
 
-const local=new URLSearchParams(location.search).get('local')==='1' && ['127.0.0.1','localhost'].includes(location.hostname);
+const local=['127.0.0.1','localhost'].includes(location.hostname) && (location.port==='8000'||new URLSearchParams(location.search).get('local')==='1');
+const localSessionToken=document.querySelector('meta[name="serverscope-session"]')?.content||'';
 const sections=['Overview','Storage','RDP health','Patch history','Services','Event logs','Reboot investigation'];
 const icons=[Activity,HardDrive,ShieldCheck,FileText,Terminal,FileText,Clock3];
 const time=x=>x?new Date(x).toLocaleString('en-GB',{timeZone:'UTC',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})+' UTC':'Unknown';
@@ -13,7 +14,7 @@ function Badge({children,tone=''}){return <span className={'badge '+tone}>{child
 function Panel({title,action,children,className=''}){return <section className={'panel '+className}><header><h2>{title}</h2>{action}</header>{children}</section>}
 function Table({heads,rows}){return rows.length?<div className="table-scroll"><table><thead><tr>{heads.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={i}>{r.map((v,j)=><td key={j}>{v??'Unknown'}</td>)}</tr>)}</tbody></table></div>:<p className="empty">No records in this snapshot. Check collection status and the selected time window.</p>}
 function App(){
- const [reports,setReports]=useState([]),[selected,setSelected]=useState(''),[tab,setTab]=useState('Overview'),[query,setQuery]=useState(''),[token,setToken]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[nav,setNav]=useState(false),[instructions,setInstructions]=useState(false);
+ const [reports,setReports]=useState([]),[selected,setSelected]=useState(''),[tab,setTab]=useState('Overview'),[query,setQuery]=useState(''),[token,setToken]=useState(localSessionToken),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[nav,setNav]=useState(false),[instructions,setInstructions]=useState(false);
  const s=reports.find(r=>r.id===selected),issues=s?findings(s):[],drives=sortedDrives(s?.drives);
  const [target,setTarget]=useState(''),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[useSSL,setUseSSL]=useState(true),[connecting,setConnecting]=useState(false);
  const view=(name)=>{setTab(name);setQuery('');setNav(false)};
@@ -46,7 +47,7 @@ function App(){
  <main><div className="mobilebar"><button aria-label="Toggle navigation" onClick={()=>setNav(!nav)}><Menu size={20}/></button><span>ServerScope</span></div><div className="breadcrumb">Workspace <ChevronRight size={13}/> Windows servers <ChevronRight size={13}/> {tab}</div><div className="title-row"><div><h1>{tab==='Overview'?'Server Health Check':tab}</h1><p>CPU, memory, storage and Windows health in one place.</p></div><button className="secondary" onClick={()=>setInstructions(true)}><Terminal size={16}/> Setup guide</button></div>
  <div className="demo-banner"><ShieldCheck size={18}/><div><strong>{local?'Private local session':'You’re exploring a simulated environment'}</strong><span>{local?'Private health reports remain on this workstation.':'Fictional servers and event records. Use the example name or IP below to try the connection flow.'}</span></div><Badge>{local?'Local only':'Demo mode'}</Badge></div>
  <section className="connect-panel"><div><h2>Connect to a server</h2><p>{local?'Enter a server name or IP on your management network. The check can take up to 3 minutes.':'Try LAB-APP-01 / 192.0.2.10, LAB-DB-01 / 192.0.2.20 or LAB-WEB-01 / 192.0.2.30. Demo only.'}</p></div><form onSubmit={connectServer}>
- {local&&<label>Local session token<input required type="password" value={token} onChange={e=>setToken(e.target.value)} autoComplete="off" placeholder="From the backend terminal"/></label>}
+ {local&&!localSessionToken&&<label>Local session token<input required type="password" value={token} onChange={e=>setToken(e.target.value)} autoComplete="off" placeholder="From the backend terminal"/></label>}
  <label>Server name or IP<input required value={target} onChange={e=>setTarget(e.target.value)} maxLength={253} placeholder={local?'server01.example.internal or 10.0.0.10':'LAB-APP-01 or 192.0.2.10'} autoComplete="off" disabled={connecting}/></label>
  {local&&<><label>Username<input required value={username} onChange={e=>setUsername(e.target.value)} maxLength={256} placeholder="DOMAIN\\username" autoComplete="off" disabled={connecting}/></label><label>Password<input required type="password" value={password} onChange={e=>setPassword(e.target.value)} maxLength={4096} autoComplete="off" disabled={connecting}/></label></>}
  <button className="primary" type="submit" disabled={connecting||busy}><Server size={16}/>{connecting?'Connecting…':local?'Connect & check health':'Connect (demo)'}</button>

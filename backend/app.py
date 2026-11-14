@@ -6,10 +6,11 @@ import ipaddress
 import re
 import subprocess
 import threading
+import html
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.concurrency import run_in_threadpool
@@ -127,12 +128,29 @@ if (ROOT / 'dist/assets').exists():
 
 @app.get('/')
 def index():
-    return FileResponse(ROOT / 'dist/index.html')
+    document = (ROOT / 'dist/index.html').read_text(encoding='utf-8')
+    session = '<meta name="serverscope-session" content="' + html.escape(TOKEN, quote=True) + '">'
+    return HTMLResponse(document.replace('</head>', session + '</head>'))
 
 def main():
     import uvicorn
-    print('\nLocal dashboard: http://127.0.0.1:8000/?local=1')
+    import sys
+    print('\nREAL SERVER HEALTH CHECK: http://127.0.0.1:8000/')
     print('Session token (keep private): ' + TOKEN + '\n')
+    if '--open-browser' in sys.argv:
+        def open_dashboard():
+            import time
+            import urllib.request
+            import webbrowser
+            for _ in range(40):
+                try:
+                    with urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=0.5) as response:
+                        if response.status == 200:
+                            webbrowser.open('http://127.0.0.1:8000/')
+                            return
+                except OSError:
+                    time.sleep(0.25)
+        threading.Thread(target=open_dashboard, daemon=True).start()
     uvicorn.run(app, host='127.0.0.1', port=8000, access_log=False)
 
 if __name__ == '__main__':
