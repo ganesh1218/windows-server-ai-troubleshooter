@@ -1,6 +1,6 @@
 # Windows Server Health Check 2.0
 
-**Run with Windows PowerShell 5.1. No Python, Node.js, package installation or target-server agent is required.**
+**Use the website with a local Python connector on Windows. No pip packages, Node.js or target-server agent is required.** An optional PowerShell-only dashboard is also included.
 
 [Website and run guide](https://wshc.ganesh18.dpdns.org) · [Private shared hosting](DEPLOYMENT.md) · [Release notes](CHANGELOG.md)
 
@@ -12,27 +12,30 @@ Production settings: branch `main`, build command `npm run build`, output direct
 
 `cloudflare-hosting.json` contains only public project identifiers. `/hosting-health` and `X-WSHC-Hosting` identify Cloudflare Pages. Public `/api/*` requests return 404; Windows diagnostics remain on the private PowerShell host. Frontend build tooling runs in Cloudflare, not on end-user machines.
 
-ServerScope provides a browser dashboard for read-only Windows Server diagnostics. Enter a server name or IP and Windows credentials; the PowerShell backend collects a fresh snapshot through WinRM with WMI/DCOM fallback. The prebuilt React dashboard is included in `dashboard.zip`.
+ServerScope provides a browser dashboard for read-only Windows Server diagnostics. Enter a server name or IP and Windows credentials; the local connector calls a fixed, bundled PowerShell collector through WinRM with WMI/DCOM fallback. The prebuilt React dashboard for the optional PowerShell web host is included in `dashboard.zip`.
 
 ## Use the website as your dashboard
 
-Open Windows PowerShell in the project folder and run:
+1. Install [Python for Windows](https://www.python.org/downloads/windows/) version 3.11 or newer.
+2. [Download the Python connector](https://wshc.ganesh18.dpdns.org/downloads/windows-server-health-check-connector.zip) and extract it. Keep `connector.py` and its `scripts` folder together.
+3. Open a terminal in the extracted folder and run:
 
 ```powershell
-.\scripts\Start-HealthCheck.ps1 -NoBrowser
+py -3 connector.py
 ```
 
-Keep that window open. Open **https://wshc.ganesh18.dpdns.org**, enter the server name/IP, and click **Continue to authentication**. The website checks for the local PowerShell service. If it is unavailable, the page asks you to start it and retry. Opening PowerShell alone is insufficient; the command above starts the service.
+If `py` is unavailable, use `python connector.py`. No pip dependencies are required. Keep the terminal open; no separate PowerShell window is needed. The connector invokes built-in Windows PowerShell 5.1 in the background. See [connector/SETUP.md](connector/SETUP.md) for troubleshooting.
 
-When the service is found, enter its printed session code and click **Pair local service**. Then enter your Windows credentials and click **Connect & check health** to view live results on the website. Allow local network access if your browser requests it. No CMD launcher, package prompt or page redirect is needed.
+4. Open **https://wshc.ganesh18.dpdns.org**, enter the server name/IP and click **Continue to authentication**. The website checks for the connector.
+5. Pair using its printed session code, enter your Windows credentials and click **Connect & check health**. Allow local network access if your browser requests it. Results stay on the website; no page redirect is needed.
 
-The browser sends diagnostic requests directly to `http://127.0.0.1:8000`, never to Cloudflare. The service permits only this exact website origin and requires its random per-process session code. Codes and credentials are not saved in browser storage. Restarting the service invalidates the code. Browsers or enterprise policies that block HTTPS-to-loopback connections can use the local dashboard instead. The local project and service must already be present and running.
+The browser sends diagnostic requests directly to `http://127.0.0.1:8000`, never to Cloudflare. The service permits only this exact website origin and requires its random per-process session code. Codes and credentials are not saved in browser storage. Restarting invalidates the code and clears snapshots. Browsers or enterprise policies may block HTTPS-to-loopback connections; Python does not bypass that policy. The optional PowerShell dashboard below provides a same-origin alternative. Stop either host before starting the other; both use port 8000. Automatic startup is not configured.
 
-Push changes to GitHub **main** to update the public website automatically through Cloudflare Pages. Other branches are not production deployments. Wait for the Pages build to succeed before expecting the update. Local PowerShell code runs from your project folder and does not update when the public website deploys; administrators must update that folder and restart the service when backend code changes.
+Push changes to GitHub **main** to update the public website automatically through Cloudflare Pages. Its build regenerates the connector ZIP and SHA-256 checksum from an explicit list of public source files, so the downloadable package matches that deployment. Other branches are not production deployments. Wait for the build to succeed. Existing local connectors are not updated remotely: obtain the updated package, stop the old process and restart when connector code changes.
 
 ## Local dashboard fallback
 
-Run the PowerShell command above and open **http://127.0.0.1:8000/** to use the same dashboard directly on localhost. No additional runtime installation is needed. A browser cannot start PowerShell, so keep the local service running while using either dashboard.
+From a complete source checkout, run `.\scripts\Start-HealthCheck.ps1 -NoBrowser` and open **http://127.0.0.1:8000/** to use the dashboard directly on localhost. This alternative does not require Python. A browser cannot start either backend, so keep the selected service running while using the dashboard. The small Python connector ZIP does not include this optional local dashboard.
 
 ## Connect to a server
 
@@ -165,4 +168,7 @@ Real WinRM/DCOM connections and shared HTTPS/domain authentication require your 
 | `src/` | React source and deterministic health findings |
 | `tests/` | JavaScript and Windows PowerShell tests |
 
-No Python backend remains. [MIT License](LICENSE). Provided without warranty.
+| `connector/` | Local Python connector and setup instructions |
+| `scripts/package-connector.mjs` | Builds the public connector ZIP and checksum during website builds |
+
+[MIT License](LICENSE). Provided without warranty.

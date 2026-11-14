@@ -2,7 +2,9 @@
 
 The public address `https://wshc.ganesh18.dpdns.org` is served independently by Cloudflare Pages project `wshc-health-check`; it is not the private diagnostics endpoint. The Pages project serves built public HTML/JS/CSS and makes no request to ChatGPT Sites. The private Windows hosting options below are unchanged.
 
-The runtime is Windows PowerShell 5.1 plus Windows built-in .NET/HTTP.sys. The browser dashboard is bundled. Run the launcher from the existing project folder for a local session when the account already has the required URL reservation and script permissions. Browser users are not prompted to obtain a package; a local or internal PowerShell host must already be available.
+For the public website, install Python 3.11+ on your Windows management computer, extract the website's connector ZIP, and run `py -3 connector.py`. Pair through the website using its printed code. No pip packages or separate PowerShell session are needed. The connector uses Windows' built-in PowerShell collector, binds only 127.0.0.1:8000 and requires no HTTP.sys URL reservation. Script execution must still be permitted by organizational policy. See [connector/SETUP.md](connector/SETUP.md).
+
+The optional PowerShell-only web host below uses Windows PowerShell 5.1 plus built-in .NET/HTTP.sys and the bundled dashboard. It shares port 8000 with the Python connector; run only one at a time. Shared internal HTTPS hosting remains a PowerShell web-host feature, not a Python connector mode.
 
 ## Local workstation
 

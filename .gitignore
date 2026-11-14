@@ -13,3 +13,4 @@ private-data/
 .sites-local/
 .cloudflare-build/
 .openai/
+public/downloads/
