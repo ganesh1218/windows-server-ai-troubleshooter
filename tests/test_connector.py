@@ -138,6 +138,7 @@ class CollectorTests(unittest.TestCase):
         self.assertIn(b'dummy-secret', args.kwargs['input'])
         self.assertEqual(args.kwargs['timeout'], 180)
         self.assertNotIn('shell', args.kwargs)
+        self.assertFalse(any(key.upper() == 'PSMODULEPATH' for key in args.kwargs['env']))
         self.assertTrue(args.args[0][-1].endswith('Invoke-HealthCheck.ps1'))
 
     @patch('connector.connector.subprocess.run')
@@ -155,6 +156,24 @@ class CollectorTests(unittest.TestCase):
 
 
 class PackageTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'win32', 'Built-in PowerShell bridge requires Windows')
+    def test_real_bridge_success_with_harmless_collector_fixture(self):
+        with tempfile.TemporaryDirectory() as folder:
+            scripts = Path(folder) / 'scripts'
+            scripts.mkdir()
+            bridge = scripts / 'Invoke-HealthCheck.ps1'
+            bridge.write_bytes((ROOT / 'scripts/Invoke-HealthCheck.ps1').read_bytes())
+            (scripts / 'Collect-Diagnostics.ps1').write_text(
+                "param($ComputerName,$Credential,[switch]$UseSSL,$Days,[switch]$NoPersist)\n"
+                "if ($Credential.GetNetworkCredential().Password -ne 'dummy-secret') {throw 'Fixture credential mismatch'}\n"
+                "@{schemaVersion=1;id=$ComputerName;errors=@()} | ConvertTo-Json -Compress\n")
+            with patch('connector.connector.ROOT', Path(folder)):
+                status, data = collect({'target': 'fixture-server', 'username': 'TEST\\fixture',
+                                        'password': 'dummy-secret', 'use_ssl': True})
+            self.assertEqual(status, 200, data)
+            self.assertEqual(data['id'], 'fixture-server')
+            self.assertFalse(data['simulated'])
+
     @unittest.skipUnless(sys.platform == 'win32', 'Built-in PowerShell bridge requires Windows')
     def test_extracted_package_can_run_fixed_bridge_without_remote_contact(self):
         archive = ROOT / 'public/downloads/windows-server-health-check-connector.zip'

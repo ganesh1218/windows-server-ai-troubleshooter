@@ -1,5 +1,10 @@
 # Release notes
 
+## Windows PowerShell child-process compatibility
+
+- Clear inherited PSModulePath only in the collector child process so Windows PowerShell 5.1 rebuilds compatible module paths instead of loading PowerShell 7 module/type files.
+- Added a real successful Python-to-PowerShell bridge test using dummy credentials and a harmless local collector fixture. No remote server is contacted.
+
 ## Python connector and website setup
 
 - Added a downloadable local Python connector, official Python download link and step-by-step website setup instructions.

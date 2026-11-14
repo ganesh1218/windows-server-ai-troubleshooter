@@ -41,6 +41,8 @@ function Invoke-CollectorProcess {
     $info.FileName=Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
     $info.Arguments='-NoProfile -NonInteractive -File "'+$BridgePath+'"'
     $info.UseShellExecute=$false;$info.CreateNoWindow=$true
+    # Let Windows PowerShell rebuild its own compatible module search paths.
+    [void]$info.EnvironmentVariables.Remove('PSModulePath')
     $info.RedirectStandardInput=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
     $utf8=[Text.UTF8Encoding]::new($false)
     $info.StandardOutputEncoding=$utf8;$info.StandardErrorEncoding=$utf8

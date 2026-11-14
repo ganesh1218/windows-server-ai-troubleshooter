@@ -71,11 +71,14 @@ def collect(data):
     """Only a fixed, bundled script runs; credentials travel through stdin."""
     executable = Path(os.environ.get('SystemRoot', r'C:\Windows')) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
     try:
+        # PowerShell 7 module/type paths must not leak into Windows PowerShell
+        # 5.1. Remove case-insensitively: Windows stores environment keys uppercase.
+        environment = {key: value for key, value in os.environ.items() if key.upper() != 'PSMODULEPATH'}
         result = subprocess.run(
             [str(executable), '-NoProfile', '-NonInteractive', '-File',
              str(ROOT / 'scripts/Invoke-HealthCheck.ps1')],
             input=json.dumps(data, ensure_ascii=True).encode('utf-8'),
-            capture_output=True, timeout=180, check=False,
+            capture_output=True, timeout=180, check=False, env=environment,
             creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         if result.returncode:
             return 502, process_failure(result)
