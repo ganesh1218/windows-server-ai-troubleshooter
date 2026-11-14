@@ -14,7 +14,11 @@ Production settings: branch `main`, build command `npm run build`, output direct
 
 ServerScope provides a browser dashboard for read-only Windows Server diagnostics. Enter a server name or IP and Windows credentials; the PowerShell backend collects a fresh snapshot through WinRM with WMI/DCOM fallback. The prebuilt React dashboard is included in `dashboard.zip`.
 
-## Download and run
+## Run on localhost
+
+For an existing checkout, run `Start-HealthCheck.cmd` and open **http://127.0.0.1:8000/**. Enter the server name/IP and credentials there to collect live health details. The public website provides an **Open local dashboard** link; it never receives those details. No additional runtime installation is needed. A browser cannot start PowerShell, so keep the local service running while using the dashboard.
+
+## First-time source setup
 
 1. [Download the complete repository ZIP](https://github.com/ganesh1218/windows-server-health-check/archive/refs/heads/main.zip).
 2. Extract it to a folder on your Windows management workstation or internal Windows host.
