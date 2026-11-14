@@ -1,5 +1,13 @@
 # Release notes
 
+## Independent Cloudflare hosting
+
+- Public website assets are deployed directly to Cloudflare Worker `wshc`.
+- Added native GitHub/Cloudflare build configuration and deployment scripts.
+- Removed local ChatGPT Sites hosting configuration.
+- Added `/hosting-health` and `X-WSHC-Hosting` for deployment verification.
+- Public management API routes remain unavailable; the PowerShell backend stays private.
+
 ## 2.0 — PowerShell-only runtime
 
 - The web backend runs with Windows PowerShell 5.1 and built-in Windows components.

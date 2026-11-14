@@ -11,3 +11,5 @@ private-data/
 .runtime/
 *.tar.gz
 .sites-local/
+.cloudflare-build/
+.openai/

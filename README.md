@@ -4,6 +4,19 @@
 
 [Website and run guide](https://wshc.ganesh18.dpdns.org) · [Private shared hosting](DEPLOYMENT.md) · [Release notes](CHANGELOG.md)
 
+## Public website hosting
+
+The public website is deployed as the independent **wshc Cloudflare Worker**. It serves only the compiled public dashboard files, with no proxy to ChatGPT Sites. GitHub is the source repository; Cloudflare Workers Builds can deploy pushes to `main` after its build API token is authorized.
+
+Cloudflare build settings:
+
+- Build command: `npm run build:cloudflare`
+- Deploy command: `npm run deploy:cloudflare`
+- Production branch: `main`
+- Worker: `wshc`
+
+The native Cloudflare build token is kept in Cloudflare's protected build environment, never committed to GitHub. `cloudflare-hosting.json` contains only public deployment identifiers. `/hosting-health` reports the independent hosting platform. Public `/api/*` requests are rejected; Windows diagnostics remain on the private PowerShell host.
+
 ServerScope provides a browser dashboard for read-only Windows Server diagnostics. Enter a server name or IP and Windows credentials; the PowerShell backend collects a fresh snapshot through WinRM with WMI/DCOM fallback. The prebuilt React dashboard is included in `dashboard.zip`.
 
 ## Download and run
