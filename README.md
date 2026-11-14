@@ -1,150 +1,141 @@
 # Windows Server Health Check
 
-ServerScope is a Windows Server health-check dashboard for administrators working on a trusted management network. Enter a server name or IP address, authenticate with a Windows account, and collect a fresh read-only health snapshot through WinRM with WMI/DCOM fallback.
+**Run with Windows PowerShell 5.1. No Python, Node.js, package installation or target-server agent is required.**
 
-Built with **Windows PowerShell 5.1**, **Python FastAPI** and **React**. No model service or cloud analysis is required.
+ServerScope provides a browser dashboard for read-only Windows Server diagnostics. Enter a server name or IP and Windows credentials; the PowerShell backend collects a fresh snapshot through WinRM with WMI/DCOM fallback. The prebuilt React dashboard is included in `dashboard.zip`.
 
-## Health information
+## Download and run
 
-| Check | Details |
+1. [Download the complete repository ZIP](https://github.com/ganesh1218/windows-server-health-check/archive/refs/heads/main.zip).
+2. Extract it to a folder on your Windows management workstation or internal Windows host.
+3. Double-click **Start-HealthCheck.cmd**.
+4. Open **http://127.0.0.1:8000/** if the browser does not open automatically.
+5. Enter the target server name/IP, username such as `DOMAIN\username`, and password. Click **Connect & check health**.
+
+Keep the PowerShell window open. Press **Ctrl+C** there to stop. The bundled dashboard is extracted to `.runtime/web/` automatically; no build or dependency download happens at startup.
+
+To launch directly from Windows PowerShell:
+
+```powershell
+.\scripts\Start-HealthCheck.ps1
+```
+
+Windows HTTP.sys may require an administrator-approved URL reservation. If the listener reports access denied, use **Run as administrator** for a local test, or ask your administrator to reserve the exact URL for the account running the application. The application does not change URL reservations, firewall rules, execution policy, certificates or remote-management settings automatically.
+
+Windows PowerShell 5.1 and its built-in .NET/CIM/networking components are the runtime requirements. Script execution must be permitted by your organization's policy. A normal browser cannot run PowerShell itself; the backend runs once on the Windows host. Your workstation/host must already have network or VPN access to the target servers and an account with the required remote diagnostic permissions.
+
+## One shared internal website
+
+You can run the backend on **one internal Windows management server**. Users then open its private HTTPS address in their browsers. Nothing from this project needs installing on their laptops or target servers.
+
+Shared mode requires all of the following:
+
+- An explicit private HTTPS hostname and a trusted certificate bound in Windows HTTP.sys.
+- A URL reservation for the Windows account running the application.
+- Windows Integrated Authentication and an explicit list of allowed Windows user accounts.
+- Firewall access scoped to the intended private management network; no public exposure.
+
+Launch after those administrator-managed prerequisites are in place:
+
+```powershell
+.\scripts\Start-HealthCheck.ps1 `
+  -Prefix 'https://healthcheck.example.internal:8443/' `
+  -AllowRemote `
+  -AllowedUsers 'DOMAIN\operator1','DOMAIN\operator2' `
+  -NoBrowser
+```
+
+HTTP shared hosting, wildcard listener prefixes, missing Windows identities and accounts outside the allowlist are rejected. The application uses Negotiate authentication; your domain/browser configuration must permit integrated authentication to this internal hostname. Target-server credentials are entered separately over HTTPS. Collected snapshots are isolated by the authenticated operator's identity and remain in memory until the host process stops.
+
+The listener handles requests serially, including one collection at a time. Other browser requests can wait while a check runs. This is a small administrative tool, not a high-concurrency monitoring platform. Shared HTTPS/domain authentication still needs validation in your environment.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for administrator configuration examples and [SECURITY.md](SECURITY.md) for the boundary. The public hosted page contains setup guidance and optional fictional preview data; it cannot access private servers or execute PowerShell.
+
+## What it checks
+
+| Area | Details |
 | --- | --- |
 | CPU | Point-in-time processor utilization |
-| Memory | Used and total physical RAM, with utilization percentage |
-| Storage | Every logical drive, with C: first and free/total capacity |
-| Remote Desktop | Enablement, TermService state, NLA and TCP 3389 reachability |
-| Windows updates | QFE installation history and installation accounts when available |
+| RAM | Used/total physical memory and utilization |
+| Drives | All logical drives, with C: first and free/total capacity |
+| RDP | Enablement, TermService state, NLA and TCP 3389 reachability |
+| Patches | QFE installation history and installation accounts when available |
 | Services | Current state and startup mode |
-| Event logs | Recent System and Application warnings and errors |
-| Reboots and shutdowns | Event timestamps, planned/unexpected evidence and initiating accounts when available |
+| Events | Recent System/Application warnings and errors |
+| Reboots/shutdowns | UTC event timestamps, lifecycle evidence and initiating accounts when available |
 
-Missing measurements are shown as **Unknown**. Health findings use fixed thresholds: CPU and RAM at 85% utilization, and disks at 85% capacity used. These findings indicate what to investigate; they do not certify availability or compliance.
+Threshold findings flag CPU/RAM at 85% used and disks at 85% capacity used. Missing data stays **Unknown**. Collection defaults to seven days of event history, capped at 100 returned records per category. Each web collection is limited to 180 seconds.
 
-## Requirements
+CPU/RAM are single samples, RDP reachability does not prove interactive login, and QFE history does not certify patch compliance. Stopped automatic/trigger-start services may be legitimate. Events 41 and 6008 may refer to the same incident and do not establish its root cause. Event creation time is not necessarily the exact shutdown time; initiating accounts are shown only when supplied by the evidence.
 
-Use a Windows management workstation with:
+## Remote connection prerequisites
 
-- Windows PowerShell 5.1 and its CIM/WMI commands.
-- Python 3.11 or later, Node.js 22 or later, and Git.
-- Network or VPN access to the Windows Server targets.
-- A Windows account with the required remote CIM/WMI, service and event-log read permissions.
-- WinRM or DCOM configured by your administrators and allowed through the private management network.
+WinRM HTTPS (5986) is the default. Domain-managed WinRM/Negotiate (5985) is available by clearing the checkbox when appropriate for your private management network. Domain hostnames are preferred for Kerberos; IP-based WinRM may require an appropriately configured HTTPS listener and matching certificate.
 
-The application does not enable remote management, change firewall rules or grant remote permissions.
+DCOM fallback requires remote WMI rights, RPC 135 and your organization's restricted RPC dynamic-port policy. The app never enables services, opens firewall ports, broadens TrustedHosts or disables certificate validation. No target-server software from this project is required, but existing Windows remote management must be configured.
 
-## Installation
+## Credentials and data
 
-```powershell
-git clone https://github.com/ganesh1218/windows-server-health-check.git
-cd windows-server-health-check
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
-npm.cmd ci
-npm.cmd run build
-```
+The form masks the password and clears it after submission. Credentials reach the PowerShell collector through stdin, not command-line arguments or report files. They necessarily exist transiently in browser and PowerShell process memory. Use a trusted management host; managed runtimes do not guarantee complete memory erasure.
 
-## Start and connect
+The host supplies its per-process API token to its own HTML. Tokens are not placed in URLs or persistent browser storage. Host/Origin validation, API tokens, no-store responses and restricted static-file routes protect browser access. Remote shared mode additionally requires HTTPS and allowed Windows identities. Report text is displayed as text and is never executed. There is no arbitrary command or script-upload endpoint.
 
-Double-click **Start-HealthCheck.cmd**. It starts the local service and opens **http://127.0.0.1:8000/**. Keep the terminal open while using the application. Press **Ctrl+C** in that terminal to stop it.
-
-Alternatively, start the service from a terminal:
-
-```powershell
-.\.venv\Scripts\python.exe -m backend.app
-```
-
-Open the local address, then:
-
-1. Enter the server's DNS name or IP address.
-2. Enter a Windows username such as `DOMAIN\username` and its password.
-3. Choose the appropriate WinRM connection option.
-4. Click **Connect & check health**.
-5. Review the fresh snapshot, collection errors and supporting event records.
-
-The browser establishes its local API session automatically. A collection can take up to 180 seconds. Only one collection runs at a time. Reconnect with credentials to collect another fresh snapshot; reloading collected reports only displays existing snapshots.
-
-WinRM HTTPS on port 5986 is selected by default. Use domain-managed WinRM/Negotiate on port 5985 only when appropriate for your management network. A domain hostname is preferred for Kerberos. IP-based connections may require an appropriately configured HTTPS listener and matching certificate. If WinRM fails, collection attempts WMI/DCOM.
-
-**Use the local Windows application for actual servers.** A hosted static preview cannot reach your management network and does not run the collection API.
-
-## Credentials and report privacy
-
-Passwords are masked in the connection form and cleared after submission. The local API passes credentials to a fixed PowerShell script through stdin, never through command arguments or report files. Plaintext credentials necessarily exist transiently in browser and process memory; this is not protection against a compromised workstation.
-
-New web collections stay in backend/browser memory unless explicitly exported. Exported reports can contain sensitive hostnames, accounts and event messages. Protect them according to your organization's retention and access policies. Do not commit real diagnostics or credentials to GitHub.
-
-FastAPI binds to **127.0.0.1:8000**. API calls require a per-process token; Host/Origin checks and a loopback-client check reject unexpected access. The token is supplied only to the local dashboard HTML, not to URLs or persistent browser storage. Access logs are disabled and responses use `Cache-Control: no-store`.
-
-Keep FastAPI, WinRM and DCOM private. Do not expose the application through a public proxy or tunnel. Do not disable certificate validation, broaden TrustedHosts or enable insecure authentication to fix a connection. See [SECURITY.md](SECURITY.md).
+Fresh web reports are memory-only unless exported. Reconnect with credentials for a new snapshot; **Reload collected snapshots** only reloads existing snapshots. Exported reports can contain sensitive hostnames, accounts and event messages. Keep them private and out of GitHub. The application performs no remediation.
 
 ## Optional console collection
 
-From Windows PowerShell 5.1:
-
 ```powershell
-.\scripts\Collect-Diagnostics.ps1 -ComputerName 'server01.example.internal','server02.example.internal' -UseSSL -Days 7
+.\scripts\Collect-Diagnostics.ps1 -ComputerName 'server01.example.internal' -UseSSL -Days 7
 ```
 
-The console workflow uses `Get-Credential` and saves JSON to the Git-ignored `private-data/` directory. Its dedicated directory ACL grants the operator and SYSTEM access and removes inherited access. Review existing explicit ACLs when choosing another output directory. The dashboard workflow uses `-NoPersist` and does not create those files.
+This prompts with `Get-Credential` and saves JSON under the Git-ignored `private-data/` directory. The dedicated directory ACL grants the operator and SYSTEM access and removes inherited access. Review existing explicit ACLs if overriding `-OutputDirectory`. Console `-Days` supports 1–30 days. The browser's collector uses `-NoPersist` instead.
 
-Use **Load previously saved console reports** in the dashboard to read console results. To select another private report directory before starting the service:
+## Troubleshooting
 
-```powershell
-$env:DIAGNOSTIC_DIR = 'D:\RestrictedReports'
-```
-
-`APP_TOKEN` can supply a strong process token for managed deployments; never commit it or an environment file.
-
-## Troubleshooting connections
-
-| Result | What to verify |
+| Problem | Check |
 | --- | --- |
-| Server not reachable | DNS resolution, target address and network/VPN route |
-| WinRM fails | Listener, certificate, authentication, account rights and private firewall policy |
-| DCOM fallback fails | RPC 135, your organization's RPC dynamic-port policy and remote WMI rights |
-| Script does not run | Windows PowerShell 5.1 availability and organization-approved execution policy |
-| Some sections are unavailable | Provider availability and service/event-log/namespace permissions |
-| Collection times out | Connectivity, server load and event-log volume; use a shorter console `-Days` window |
+| Listener cannot start | Port availability, exact URL reservation and HTTPS certificate binding |
+| Script is blocked | Organization-approved execution policy/signing and downloaded-file trust |
+| Server cannot connect | DNS/IP, VPN route, listener, account permissions and private firewall policy |
+| DCOM also fails | WMI namespace rights and RPC network policy |
+| Some sections are unknown | Provider availability and per-section permissions |
+| Shared browser access denied | HTTPS, Windows authentication and the explicit allowed-user list |
+| Request waits | Another collection may be running; requests are serialized |
 
-The application does not bypass execution policy or modify remote security settings.
+## Maintainers only: rebuild and test
 
-## Interpreting the snapshot
-
-- CPU and RAM are single samples, not utilization trends.
-- RDP TCP reachability does not prove interactive login or effective firewall-policy correctness. Custom RDP ports need separate checks.
-- QFE history does not include every update type and is not a patch-compliance scan.
-- Automatic services can legitimately be stopped, including trigger-start services.
-- Event 41 and 6008 records may describe the same incident and do not identify a root cause on their own.
-- Event timestamps are normalized to UTC and represent record creation, not necessarily the exact shutdown time. Initiating accounts are shown only when supplied by the available evidence.
-- Event collection defaults to seven days and returns up to 100 records per event category. Console collection supports `-Days 1` through `-Days 30`.
-
-Real-server WinRM/DCOM connectivity must be validated in your environment. Automated tests do not substitute for that integration check.
-
-## Development and tests
+End users do not need these development tools. Node.js is needed only to modify/rebuild the React source:
 
 ```powershell
+npm.cmd ci
 npm.cmd test
 npm.cmd run build
-.\.venv\Scripts\python.exe -m pytest tests\test_api.py -q
+powershell.exe -NoProfile -File scripts\Bundle-Dashboard.ps1
 powershell.exe -NoProfile -File tests\Test-Collector.ps1
+powershell.exe -NoProfile -File tests\Test-Server.ps1
 ```
 
-Tests cover drive ordering, threshold boundaries, unknown measurements, API authentication, Host/Origin restrictions, credential redaction, target validation, subprocess arguments, timeouts and collection failures. PowerShell checks validate parser compatibility and collector safety contracts. GitHub Actions runs the checks on Windows.
+Commit the rebuilt `dashboard.zip` with source changes. `npm.cmd run dev` uses fictional preview fixtures. PowerShell server tests exercise authentication, Host/Origin checks, target validation, redaction, timeout/error handling and operator isolation with mocked collection responses.
 
-`npm.cmd run dev` serves the frontend with fictional UI-preview fixtures. For actual connections, build the frontend and serve it through FastAPI at port 8000. Files in `src/sample.js` and `samples/diagnostics.simulated.json` are intentionally fictional and must never be replaced with real diagnostic data.
+With the PowerShell server running, test real HTTP serving without contacting a target server:
+
+```powershell
+powershell.exe -NoProfile -File tests\Test-Http.ps1 -BaseUrl http://127.0.0.1:8000
+```
+
+Real WinRM/DCOM connections and shared HTTPS/domain authentication require your environment; these tests are not a substitute for that integration validation.
 
 ## Source layout
 
 | Path | Purpose |
 | --- | --- |
-| `Start-HealthCheck.cmd` | One-click local Windows launcher |
-| `backend/app.py` | Authenticated connection/report API and dashboard serving |
-| `scripts/Collect-Diagnostics.ps1` | Read-only WinRM/DCOM health collector |
-| `scripts/Invoke-HealthCheck.ps1` | Private stdin bridge between FastAPI and PowerShell |
-| `src/` | Dashboard, deterministic findings and preview fixtures |
-| `tests/` | JavaScript, API and PowerShell checks |
+| `Start-HealthCheck.cmd` | Windows PowerShell launcher |
+| `dashboard.zip` | Prebuilt browser dashboard; no runtime build required |
+| `scripts/Start-HealthCheck.ps1` | Built-in HTTP.sys/HttpListener web host |
+| `scripts/Server.Core.psm1` | Authentication, request routing and bounded collector process |
+| `scripts/Collect-Diagnostics.ps1` | Read-only WinRM/DCOM diagnostics |
+| `scripts/Invoke-HealthCheck.ps1` | Private stdin credential bridge |
+| `src/` | React source and deterministic health findings |
+| `tests/` | JavaScript and Windows PowerShell tests |
 
-## Documentation and license
-
-[Microsoft CIM sessions and DCOM](https://learn.microsoft.com/en-us/powershell/module/cimcmdlets/new-cimsession?view=powershell-5.1) · [Microsoft reboot investigation](https://learn.microsoft.com/en-us/troubleshoot/windows-server/performance/troubleshoot-unexpected-reboots-system-event-logs)
-
-[MIT License](LICENSE). Provided without warranty.
+No Python backend remains. [MIT License](LICENSE). Provided without warranty.

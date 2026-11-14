@@ -7,5 +7,7 @@ private-data/
 .env*
 *.log
 *.zip
+!dashboard.zip
+.runtime/
 *.tar.gz
 .sites-local/
