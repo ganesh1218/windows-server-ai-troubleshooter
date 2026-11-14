@@ -1,4 +1,5 @@
-// Entirely fictional fixture. Never replace this file with collected diagnostics.
+// Optional UI-preview fixtures only. Real health checks come from /api/connect.
+// Never replace these fictional records with private server diagnostics.
 const base = {
  schemaVersion:1,simulated:true,collectedAt:'2026-11-14T07:20:00Z',transport:'WinRM',
  patches:[{id:'KB5000001',description:'Simulated security update',installedOn:'2026-11-11',installedBy:'LAB\\patch-operator'},{id:'KB5000002',description:'Simulated cumulative update',installedOn:'2026-10-15',installedBy:'NT AUTHORITY\\SYSTEM'}],

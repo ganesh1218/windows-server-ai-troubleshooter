@@ -1,5 +1,6 @@
 #requires -Version 5.1
-# Private API bridge. Request/credentials arrive through stdin, never argv or disk.
+# Bridge the local connection form to the read-only collector.
+# Credentials arrive on stdin; only diagnostic JSON is written to stdout.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)

@@ -1,4 +1,6 @@
 #requires -Version 5.1
+# Collect a read-only Windows health snapshot using WinRM, then DCOM if needed.
+# Console calls save private JSON; the local dashboard uses -NoPersist.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)][ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9.:-]{0,252}$')][string[]]$ComputerName,

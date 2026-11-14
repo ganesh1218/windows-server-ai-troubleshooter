@@ -5,7 +5,9 @@ import {samples} from './sample';
 import {sortedDrives,percentUsed,findings,healthChecks} from './model';
 import './style.css';
 
+// Only the loopback app can use the real connection API; hosted previews use fixtures.
 const local=['127.0.0.1','localhost'].includes(location.hostname) && (location.port==='8000'||new URLSearchParams(location.search).get('local')==='1');
+// FastAPI supplies the session to its own HTML, keeping it out of URLs and storage.
 const localSessionToken=document.querySelector('meta[name="serverscope-session"]')?.content||'';
 const sections=['Overview','Storage','RDP health','Patch history','Services','Event logs','Reboot investigation'];
 const icons=[Activity,HardDrive,ShieldCheck,FileText,Terminal,FileText,Clock3];

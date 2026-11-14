@@ -1,4 +1,8 @@
-"""Authenticated loopback-only Windows health collection and report viewer."""
+"""Server Health Check: authenticated local API for read-only Windows diagnostics.
+
+The operator supplies a target and credentials; a fixed PowerShell collector
+returns a fresh snapshot. Remote management is never exposed by this service.
+"""
 import json
 import os
 import secrets
@@ -59,6 +63,7 @@ def get_reports():
     return list({r['id']: r for r in reports() + list(LIVE_REPORTS.values())}.values())
 
 def valid_target(target):
+    """Accept DNS hostnames and IP literals, excluding URLs and shell syntax."""
     try:
         ipaddress.ip_address(target)
         return True
@@ -66,6 +71,7 @@ def valid_target(target):
         return bool(len(target) <= 253 and all(re.fullmatch(r'[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?', label) for label in target.split('.')))
 
 def run_collection(payload):
+    """Run one bounded collection; send credentials via stdin and retain only results."""
     if os.name != 'nt':
         raise HTTPException(503, 'Live collection requires a Windows workstation with PowerShell 5.1.')
     if not COLLECTION_LOCK.acquire(blocking=False):
@@ -96,7 +102,7 @@ def run_collection(payload):
 
 @app.post('/api/connect', dependencies=[Depends(authorize)])
 async def connect(request: Request):
-    # Parse manually so validation errors never echo submitted passwords.
+    # Validate without Pydantic request echoes, which could disclose a password.
     body = bytearray()
     async for chunk in request.stream():
         body.extend(chunk)

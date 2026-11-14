@@ -1,5 +1,6 @@
 export const sortedDrives = drives => [...(drives || [])].sort((a,b) => (a.name === 'C:' ? -1 : b.name === 'C:' ? 1 : a.name.localeCompare(b.name)));
 export const percentUsed = drive => drive.totalGB > 0 && drive.freeGB != null ? Math.round((1-drive.freeGB/drive.totalGB)*100) : null;
+// Fixed snapshot thresholds. Missing measurements remain unknown.
 export function healthChecks(s) {
   const drives = sortedDrives(s.drives);
   return [
@@ -10,6 +11,7 @@ export function healthChecks(s) {
     {name:'Collection completeness',state:s.errors?.length?'Review':'Passing'}
   ];
 }
+// Findings identify evidence to review; they do not establish root cause or compliance.
 export function findings(s) {
   const items=[];
   if(s.cpu>=85) items.push({severity:'Warning',title:'CPU pressure',detail:`CPU utilization is ${s.cpu}%. Capture another sample and inspect the busiest processes.`});
