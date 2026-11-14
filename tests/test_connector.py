@@ -121,6 +121,13 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(result['errorCode'], 'credential_setup')
         result = process_failure(subprocess.CompletedProcess([], 1, b'{"errorCode":"dummy-secret"}', b''))
         self.assertEqual(result['errorCode'], 'collector_failed')
+        result = process_failure(subprocess.CompletedProcess([], 1, b'{"errorCode":"collector_failed","exceptionType":"System.InvalidOperationException","script":"Collect-Diagnostics.ps1","line":23,"password":"dummy-secret"}', b''))
+        self.assertIn('System.InvalidOperationException', result['detail'])
+        self.assertIn('23', result['detail'])
+        self.assertNotIn('dummy-secret', json.dumps(result))
+        result = process_failure(subprocess.CompletedProcess([], 1, b'{"errorCode":{},"exceptionType":"dummy-secret","script":"private-path","line":"dummy-secret"}', b''))
+        self.assertNotIn('dummy-secret', json.dumps(result))
+        self.assertNotIn('private-path', json.dumps(result))
 
     def payload(self):
         return {'target': 'server01', 'username': 'LAB\\test', 'password': 'dummy-secret', 'use_ssl': True}
@@ -156,6 +163,50 @@ class CollectorTests(unittest.TestCase):
 
 
 class PackageTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'win32', 'Built-in PowerShell readiness check requires Windows')
+    def test_packaged_diagnostic_mode_needs_no_server_or_credentials(self):
+        archive = ROOT / 'public/downloads/windows-server-health-check-connector.zip'
+        with tempfile.TemporaryDirectory() as folder:
+            with zipfile.ZipFile(archive) as package:
+                for name in ('connector.py', 'scripts/Test-ConnectorEnvironment.ps1',
+                             'scripts/Invoke-HealthCheck.ps1', 'scripts/Collect-Diagnostics.ps1'):
+                    destination = Path(folder) / name
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(package.read(name))
+            result = subprocess.run([sys.executable, str(Path(folder) / 'connector.py'), '--diagnose'],
+                                    capture_output=True, timeout=35)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            output = result.stdout.decode()
+            data = json.loads(output[output.index('{'):])
+            self.assertEqual(data['connectorVersion'], '1.0.2')
+            self.assertEqual(next(item for item in data['checks'] if item['check'] == 'Collect-Diagnostics.ps1')['status'], 'parse-ok')
+            self.assertNotIn(folder, output)
+            self.assertNotIn('session code', output)
+
+    @unittest.skipUnless(sys.platform == 'win32', 'Built-in PowerShell bridge requires Windows')
+    def test_real_collector_with_mocked_remote_commands(self):
+        with tempfile.TemporaryDirectory() as folder:
+            scripts = Path(folder) / 'scripts'
+            scripts.mkdir()
+            for name in ('Invoke-HealthCheck.ps1', 'Collect-Diagnostics.ps1'):
+                destination = scripts / (name if name.startswith('Invoke') else 'Actual-Diagnostics.ps1')
+                destination.write_bytes((ROOT / 'scripts' / name).read_bytes())
+            (scripts / 'Collect-Diagnostics.ps1').write_text(
+                "param($ComputerName,$Credential,[switch]$UseSSL,$Days,[switch]$NoPersist)\n"
+                "function New-CimSessionOption {param($Protocol,[switch]$UseSsl) @{}}\n"
+                "function New-CimSession {param($ComputerName,$Credential,$Authentication,$SessionOption,$OperationTimeoutSec) @{}}\n"
+                "function Remove-CimSession {param($CimSession)}\n"
+                "function Test-NetConnection {param($ComputerName,$Port,$InformationLevel,$WarningAction) $false}\n"
+                "function Get-CimInstance {param($ClassName,$CimSession,$ErrorAction,$Namespace,$Filter) "
+                "if($ClassName -eq 'Win32_OperatingSystem'){[pscustomobject]@{TotalVisibleMemorySize=1000000;FreePhysicalMemory=500000}}}\n"
+                "& (Join-Path $PSScriptRoot 'Actual-Diagnostics.ps1') -ComputerName $ComputerName -Credential $Credential -UseSSL:$UseSSL -Days $Days -NoPersist\n")
+            with patch('connector.connector.ROOT', Path(folder)):
+                status, data = collect({'target': 'fixture-server', 'username': 'TEST\\fixture',
+                                        'password': 'dummy-secret', 'use_ssl': True})
+            self.assertEqual(status, 200, data)
+            self.assertEqual(data['memory']['usedPercent'], 50)
+            self.assertFalse(data['simulated'])
+
     @unittest.skipUnless(sys.platform == 'win32', 'Built-in PowerShell bridge requires Windows')
     def test_real_bridge_success_with_harmless_collector_fixture(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -198,6 +249,7 @@ class PackageTests(unittest.TestCase):
         mapping = {'connector.py': 'connector/connector.py', 'SETUP.md': 'connector/SETUP.md',
                    'scripts/Invoke-HealthCheck.ps1': 'scripts/Invoke-HealthCheck.ps1',
                    'scripts/Collect-Diagnostics.ps1': 'scripts/Collect-Diagnostics.ps1', 'LICENSE': 'LICENSE'}
+        mapping['scripts/Test-ConnectorEnvironment.ps1'] = 'scripts/Test-ConnectorEnvironment.ps1'
         with zipfile.ZipFile(archive) as package:
             self.assertIsNone(package.testzip())
             self.assertEqual(set(package.namelist()), set(mapping))

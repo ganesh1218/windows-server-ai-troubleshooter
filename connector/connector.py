@@ -20,6 +20,7 @@ WEBSITE = 'https://wshc.ganesh18.dpdns.org'
 HOST, PORT = '127.0.0.1', 8000
 ROOT = Path(__file__).resolve().parent
 MAX_BODY = 16384
+VERSION = '1.0.2'
 API_PATHS = {'/api/health', '/api/reports', '/api/connect'}
 COLLECTION_ERRORS = {
     'script_blocked': 'Windows blocked the bundled PowerShell scripts (script-signing, execution-policy or downloaded-file trust). Review the scripts and follow your organization\'s approved signing/unblocking process, then restart the connector. Do not disable your security policy.',
@@ -34,10 +35,19 @@ COLLECTION_ERRORS = {
 def process_failure(result):
     """Classify locally; never return raw stdout/stderr, paths or account names."""
     code = 'collector_failed'
+    metadata = {}
     try:
-        supplied = json.loads(result.stdout.decode('utf-8-sig')).get('errorCode')
-        if supplied in COLLECTION_ERRORS:
+        error = json.loads(result.stdout.decode('utf-8-sig'))
+        supplied = error.get('errorCode')
+        if isinstance(supplied, str) and supplied in COLLECTION_ERRORS:
             code = supplied
+        kind = error.get('exceptionType', '')
+        if isinstance(kind, str) and len(kind) < 180 and re.fullmatch(r'(?:System|Microsoft)\.[A-Za-z0-9_.]+', kind):
+            metadata['exceptionType'] = kind
+        if error.get('script') in ('Invoke-HealthCheck.ps1', 'Collect-Diagnostics.ps1', 'PowerShell'):
+            metadata['script'] = error['script']
+        if type(error.get('line')) is int and 0 < error['line'] < 100000:
+            metadata['line'] = error['line']
     except (ValueError, AttributeError, UnicodeError):
         pass
     diagnostic = result.stderr.decode('utf-8', errors='replace')
@@ -45,7 +55,8 @@ def process_failure(result):
         code = 'script_blocked'
     elif re.search(r'ParserError|ParseException', diagnostic, re.I):
         code = 'script_parse_error'
-    return {'errorCode': code, 'detail': COLLECTION_ERRORS[code]}
+    suffix = (' Diagnostic: ' + ', '.join(str(value) for value in metadata.values()) + '.') if metadata else ''
+    return {'errorCode': code, 'detail': COLLECTION_ERRORS[code] + suffix, **metadata, 'connectorVersion': VERSION}
 
 
 def valid_target(value):
@@ -120,7 +131,7 @@ class ConnectorServer(HTTPServer):
 
 
 class ConnectorHandler(BaseHTTPRequestHandler):
-    server_version = 'WSHC-Connector/1.0'
+    server_version = 'WSHC-Connector/' + VERSION
     sys_version = ''
 
     def setup(self):
@@ -189,7 +200,7 @@ class ConnectorHandler(BaseHTTPRequestHandler):
             return
         if self.path == '/api/health':
             self.reply(200, {'status': 'ok', 'mode': 'python', 'application': 'Server Health Check',
-                             'version': '1.0.0', 'collector': 'Windows PowerShell 5.1'})
+                             'version': VERSION, 'collector': 'Windows PowerShell 5.1'})
         elif self.authenticated():
             if self.path == '/api/reports':
                 self.reply(200, list(self.server.reports.values()))
@@ -249,9 +260,35 @@ class ConnectorHandler(BaseHTTPRequestHandler):
             payload.clear()
 
 
+def diagnose():
+    """No target or credentials: check only the local Windows runtime/scripts."""
+    executable = Path(os.environ.get('SystemRoot', r'C:\Windows')) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
+    environment = {key: value for key, value in os.environ.items() if key.upper() != 'PSMODULEPATH'}
+    print('Connector ' + VERSION + ' local readiness check (no credentials or remote connection)')
+    try:
+        result = subprocess.run([str(executable), '-NoProfile', '-NonInteractive', '-File',
+                                 str(ROOT / 'scripts/Test-ConnectorEnvironment.ps1')],
+                                capture_output=True, timeout=30, check=False, env=environment,
+                                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        if result.returncode:
+            print(json.dumps(process_failure(result), indent=2))
+            return 1
+        data = json.loads(result.stdout.decode('utf-8-sig'))
+        print(json.dumps(data, indent=2))
+        return 0 if all(item['status'] not in ('missing', 'unavailable', 'parse-error') for item in data['checks']) else 1
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        print('Local readiness check could not complete. Verify Windows PowerShell and the complete extracted connector package.')
+        return 1
+
+
 def main():
     if sys.version_info < (3, 11) or sys.platform != 'win32':
         print('Use Python 3.11 or newer on a Windows management computer.')
+        return 1
+    if sys.argv[1:] == ['--diagnose']:
+        return diagnose()
+    if sys.argv[1:]:
+        print('Usage: py -3 connector.py [--diagnose]')
         return 1
     if not all((ROOT / 'scripts' / name).is_file() for name in ('Invoke-HealthCheck.ps1', 'Collect-Diagnostics.ps1')):
         print('Extract the complete connector ZIP before starting it. Bundled collector scripts are missing.')
@@ -261,7 +298,7 @@ def main():
     except OSError:
         print('Cannot listen on 127.0.0.1:8000. Stop any previous connector or PowerShell web host, then retry.')
         return 1
-    print('Windows Server Health Check - Python connector')
+    print('Windows Server Health Check - Python connector ' + VERSION)
     print('Open ' + WEBSITE)
     print('Private session code (paste into the website, never share):')
     print(server.token)
