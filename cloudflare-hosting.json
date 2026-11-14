@@ -1,5 +1,9 @@
 {
-  "worker_name": "wshc",
+  "platform": "cloudflare-pages",
+  "project_name": "wshc-health-check",
+  "production_branch": "main",
+  "build_command": "npm run build",
+  "output_directory": "dist",
   "account_id": "46ed520c09444dc2b9b25e5aab628f9a",
   "hostname": "wshc.ganesh18.dpdns.org",
   "compatibility_date": "2026-11-14"

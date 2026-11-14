@@ -2,8 +2,8 @@
 
 ## Independent Cloudflare hosting
 
-- Public website assets are deployed directly to Cloudflare Worker `wshc`.
-- Added native GitHub/Cloudflare build configuration and deployment scripts.
+- Public website assets are deployed directly to Cloudflare Pages project `wshc-health-check`.
+- Enabled native Cloudflare GitHub integration: pushes to main build and deploy the public website automatically.
 - Removed local ChatGPT Sites hosting configuration.
 - Added `/hosting-health` and `X-WSHC-Hosting` for deployment verification.
 - Public management API routes remain unavailable; the PowerShell backend stays private.

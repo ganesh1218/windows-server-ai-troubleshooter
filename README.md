@@ -6,16 +6,11 @@
 
 ## Public website hosting
 
-The public website is deployed as the independent **wshc Cloudflare Worker**. It serves only the compiled public dashboard files, with no proxy to ChatGPT Sites. GitHub is the source repository; Cloudflare Workers Builds can deploy pushes to `main` after its build API token is authorized.
+The public website is hosted directly by **Cloudflare Pages**, project `wshc-health-check`. Cloudflare's native GitHub integration watches `ganesh1218/windows-server-health-check` and automatically builds and deploys pushes to `main`. ChatGPT Sites is not in the request path.
 
-Cloudflare build settings:
+Production settings: branch `main`, build command `npm run build`, output directory `dist`, Node.js 22. No GitHub Actions deployment secret or separate Worker build token is required. The existing Cloudflare GitHub App integration supplies repository access.
 
-- Build command: `npm run build:cloudflare`
-- Deploy command: `npm run deploy:cloudflare`
-- Production branch: `main`
-- Worker: `wshc`
-
-The native Cloudflare build token is kept in Cloudflare's protected build environment, never committed to GitHub. `cloudflare-hosting.json` contains only public deployment identifiers. `/hosting-health` reports the independent hosting platform. Public `/api/*` requests are rejected; Windows diagnostics remain on the private PowerShell host.
+`cloudflare-hosting.json` contains only public project identifiers. `/hosting-health` and `X-WSHC-Hosting` identify Cloudflare Pages. Public `/api/*` requests return 404; Windows diagnostics remain on the private PowerShell host. Frontend build tooling runs in Cloudflare, not on end-user machines.
 
 ServerScope provides a browser dashboard for read-only Windows Server diagnostics. Enter a server name or IP and Windows credentials; the PowerShell backend collects a fresh snapshot through WinRM with WMI/DCOM fallback. The prebuilt React dashboard is included in `dashboard.zip`.
 

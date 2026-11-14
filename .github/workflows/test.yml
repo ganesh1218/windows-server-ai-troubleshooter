@@ -13,7 +13,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run build:cloudflare
+      - run: npm run build
       - run: ./tests/Test-Collector.ps1
         shell: powershell
       - run: ./tests/Test-Server.ps1
