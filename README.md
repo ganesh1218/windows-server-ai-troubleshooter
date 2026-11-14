@@ -2,7 +2,7 @@
 
 **Run with Windows PowerShell 5.1. No Python, Node.js, package installation or target-server agent is required.**
 
-[Website and run guide](https://windows-server-health-check.politerose12.chatgpt.site) · [Private shared hosting](DEPLOYMENT.md) · [Release notes](CHANGELOG.md)
+[Website and run guide](https://wshc.ganesh18.dpdns.org) · [Private shared hosting](DEPLOYMENT.md) · [Release notes](CHANGELOG.md)
 
 ServerScope provides a browser dashboard for read-only Windows Server diagnostics. Enter a server name or IP and Windows credentials; the PowerShell backend collects a fresh snapshot through WinRM with WMI/DCOM fallback. The prebuilt React dashboard is included in `dashboard.zip`.
 
