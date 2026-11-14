@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 title ServerScope - Real Server Health Check
 if not exist "dashboard.zip" (
-  echo Bundled dashboard missing. Download and extract the complete repository ZIP.
+  echo Bundled dashboard missing. Ask your administrator to restore dashboard.zip in this project folder.
   pause
   exit /b 1
 )

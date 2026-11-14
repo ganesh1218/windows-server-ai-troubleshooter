@@ -18,15 +18,13 @@ ServerScope provides a browser dashboard for read-only Windows Server diagnostic
 
 For an existing checkout, run `Start-HealthCheck.cmd` and open **http://127.0.0.1:8000/**. Enter the server name/IP and credentials there to collect live health details. The public website provides an **Open local dashboard** link; it never receives those details. No additional runtime installation is needed. A browser cannot start PowerShell, so keep the local service running while using the dashboard.
 
-## First-time source setup
+## Connect to a server
 
-1. [Download the complete repository ZIP](https://github.com/ganesh1218/windows-server-health-check/archive/refs/heads/main.zip).
-2. Extract it to a folder on your Windows management workstation or internal Windows host.
-3. Double-click **Start-HealthCheck.cmd**.
-4. Open **http://127.0.0.1:8000/** if the browser does not open automatically.
-5. Enter the target server name/IP, username such as `DOMAIN\username`, and password. Click **Connect & check health**.
+1. Start **Start-HealthCheck.cmd** from the project folder on your Windows management workstation.
+2. Open **http://127.0.0.1:8000/** if the browser does not open automatically.
+3. Enter the target server name/IP, username such as `DOMAIN\username`, and password. Click **Connect & check health**.
 
-Keep the PowerShell window open. Press **Ctrl+C** there to stop. The bundled dashboard is extracted to `.runtime/web/` automatically; no build or dependency download happens at startup.
+Keep the PowerShell window open. Press **Ctrl+C** there to stop. The bundled dashboard is extracted to `.runtime/web/` automatically; no build or package setup happens at startup. The project files must already be present on the management host; the public website cannot create or start a local PowerShell service.
 
 To launch directly from Windows PowerShell:
 

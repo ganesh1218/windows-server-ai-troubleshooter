@@ -2,7 +2,7 @@
 
 The public address `https://wshc.ganesh18.dpdns.org` is served independently by Cloudflare Pages project `wshc-health-check`; it is not the private diagnostics endpoint. The Pages project serves built public HTML/JS/CSS and makes no request to ChatGPT Sites. The private Windows hosting options below are unchanged.
 
-The runtime is Windows PowerShell 5.1 plus Windows built-in .NET/HTTP.sys. The browser dashboard is bundled. Download/extract/run is sufficient for a local session when the account already has the required URL reservation and script permissions.
+The runtime is Windows PowerShell 5.1 plus Windows built-in .NET/HTTP.sys. The browser dashboard is bundled. Run the launcher from the existing project folder for a local session when the account already has the required URL reservation and script permissions. Browser users are not prompted to obtain a package; a local or internal PowerShell host must already be available.
 
 ## Local workstation
 

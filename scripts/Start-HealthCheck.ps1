@@ -17,7 +17,7 @@ if ($AllowRemote) {
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if (-not $WebRoot) {
     $archive=Join-Path $root 'dashboard.zip'
-    if (-not (Test-Path -LiteralPath $archive)) {throw 'Bundled dashboard.zip is missing. Download the complete repository ZIP.'}
+    if (-not (Test-Path -LiteralPath $archive)) {throw 'Bundled dashboard.zip is missing. Ask your administrator to restore it in the project folder.'}
     $WebRoot=Join-Path $root '.runtime/web'
     $hash=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
     $marker=Join-Path $root '.runtime/dashboard.sha256'
