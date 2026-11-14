@@ -6,15 +6,19 @@ $ProgressPreference = 'SilentlyContinue'
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $request = $null; $secure = $null; $credential = $null
+$stage='invalid_request'
 try {
     $request = [Console]::In.ReadToEnd() | ConvertFrom-Json
+    $stage='credential_setup'
     $secure = ConvertTo-SecureString -String $request.password -AsPlainText -Force
     $credential = [System.Management.Automation.PSCredential]::new($request.username,$secure)
     $request.password = $null
+    $stage='collector_failed'
     & (Join-Path $PSScriptRoot 'Collect-Diagnostics.ps1') -ComputerName $request.target -Credential $credential -UseSSL:([bool]$request.use_ssl) -Days 7 -NoPersist
 } catch {
-    # Raw exceptions may contain private request information: do not echo them.
-    [Console]::Error.WriteLine('Collection failed. Check credentials, connectivity and remote permissions.')
+    # Only allowlisted codes cross the bridge; never return raw exceptions.
+    if ($_.Exception -is [System.Management.Automation.PSSecurityException]) {$stage='script_blocked'}
+    [Console]::Out.WriteLine((ConvertTo-Json -Compress -InputObject @{errorCode=$stage}))
     exit 1
 } finally {
     $credential=$null; $request=$null

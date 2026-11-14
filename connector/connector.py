@@ -21,6 +21,31 @@ HOST, PORT = '127.0.0.1', 8000
 ROOT = Path(__file__).resolve().parent
 MAX_BODY = 16384
 API_PATHS = {'/api/health', '/api/reports', '/api/connect'}
+COLLECTION_ERRORS = {
+    'script_blocked': 'Windows blocked the bundled PowerShell scripts (script-signing, execution-policy or downloaded-file trust). Review the scripts and follow your organization\'s approved signing/unblocking process, then restart the connector. Do not disable your security policy.',
+    'invalid_request': 'The connector could not read the diagnostic request. Update the connector from the website and restart it.',
+    'credential_setup': 'Windows could not prepare the supplied credentials. Enter a non-empty username and password; use DOMAIN\\username or SERVERNAME\\username as appropriate.',
+    'collector_failed': 'The local PowerShell collector failed before returning a report. Verify the extracted scripts are complete, permitted by your policy, and Windows PowerShell 5.1 is available.',
+    'script_parse_error': 'Windows could not parse the bundled PowerShell scripts. Extract a fresh connector package and keep its scripts folder intact.',
+    'powershell_missing': 'Windows PowerShell 5.1 could not be started. Run this connector on a Windows management computer with built-in Windows PowerShell available.',
+}
+
+
+def process_failure(result):
+    """Classify locally; never return raw stdout/stderr, paths or account names."""
+    code = 'collector_failed'
+    try:
+        supplied = json.loads(result.stdout.decode('utf-8-sig')).get('errorCode')
+        if supplied in COLLECTION_ERRORS:
+            code = supplied
+    except (ValueError, AttributeError, UnicodeError):
+        pass
+    diagnostic = result.stderr.decode('utf-8', errors='replace')
+    if re.search(r'PSSecurityException|running scripts is disabled|not digitally signed', diagnostic, re.I):
+        code = 'script_blocked'
+    elif re.search(r'ParserError|ParseException', diagnostic, re.I):
+        code = 'script_parse_error'
+    return {'errorCode': code, 'detail': COLLECTION_ERRORS[code]}
 
 
 def valid_target(value):
@@ -53,7 +78,7 @@ def collect(data):
             capture_output=True, timeout=180, check=False,
             creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         if result.returncode:
-            return 502, {'detail': 'Collection failed. Check credentials, connectivity, PowerShell policy and remote permissions.'}
+            return 502, process_failure(result)
         report = json.loads(result.stdout.decode('utf-8-sig'))
         if (not isinstance(report, dict) or report.get('schemaVersion') != 1
                 or report.get('id') != data['target'] or not isinstance(report.get('errors'), list)):
@@ -64,6 +89,8 @@ def collect(data):
         return 200, report
     except subprocess.TimeoutExpired:
         return 504, {'detail': 'Health check timed out after 180 seconds.'}
+    except FileNotFoundError:
+        return 502, {'errorCode': 'powershell_missing', 'detail': COLLECTION_ERRORS['powershell_missing']}
     except (OSError, ValueError, UnicodeError):
         return 502, {'detail': 'The bundled PowerShell collector could not return a valid report.'}
     finally:

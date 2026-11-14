@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from connector.connector import ConnectorServer, WEBSITE, collect
+from connector.connector import ConnectorServer, WEBSITE, collect, process_failure
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -110,6 +110,18 @@ class ConnectorTests(unittest.TestCase):
 
 
 class CollectorTests(unittest.TestCase):
+    def test_policy_and_parse_errors_are_classified_without_leaking_stderr(self):
+        for diagnostic, expected in ((b'PSSecurityException: private path LAB\\operator dummy-secret', 'script_blocked'),
+                                     (b'ParserError: private script path dummy-secret', 'script_parse_error')):
+            result = process_failure(subprocess.CompletedProcess([], 1, b'', diagnostic))
+            self.assertEqual(result['errorCode'], expected)
+            self.assertNotIn('dummy-secret', json.dumps(result))
+            self.assertNotIn('LAB', json.dumps(result))
+        result = process_failure(subprocess.CompletedProcess([], 1, b'{"errorCode":"credential_setup"}', b''))
+        self.assertEqual(result['errorCode'], 'credential_setup')
+        result = process_failure(subprocess.CompletedProcess([], 1, b'{"errorCode":"dummy-secret"}', b''))
+        self.assertEqual(result['errorCode'], 'collector_failed')
+
     def payload(self):
         return {'target': 'server01', 'username': 'LAB\\test', 'password': 'dummy-secret', 'use_ssl': True}
 
