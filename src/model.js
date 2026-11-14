@@ -1,5 +1,15 @@
 export const sortedDrives = drives => [...(drives || [])].sort((a,b) => (a.name === 'C:' ? -1 : b.name === 'C:' ? 1 : a.name.localeCompare(b.name)));
 export const percentUsed = drive => drive.totalGB > 0 && drive.freeGB != null ? Math.round((1-drive.freeGB/drive.totalGB)*100) : null;
+export function healthChecks(s) {
+  const drives = sortedDrives(s.drives);
+  return [
+    {name:'CPU utilization',state:s.cpu==null?'Unknown':s.cpu>=85?'Review':'Passing'},
+    {name:'Physical memory',state:s.memory?.usedPercent==null?'Unknown':s.memory.usedPercent>=85?'Review':'Passing'},
+    {name:'Drive capacity',state:drives.some(d=>percentUsed(d)>=85)?'Review':!drives.length||drives.some(d=>percentUsed(d)==null)?'Unknown':'Passing'},
+    {name:'Remote Desktop',state:!s.rdp?'Unknown':s.rdp.enabled==null||s.rdp.serviceState==null||s.rdp.tcp3389==null?'Unknown':s.rdp.enabled&&s.rdp.serviceState==='Running'&&s.rdp.tcp3389?'Passing':'Review'},
+    {name:'Collection completeness',state:s.errors?.length?'Review':'Passing'}
+  ];
+}
 export function findings(s) {
   const items=[];
   if(s.cpu>=85) items.push({severity:'Warning',title:'CPU pressure',detail:`CPU utilization is ${s.cpu}%. Capture another sample and inspect the busiest processes.`});

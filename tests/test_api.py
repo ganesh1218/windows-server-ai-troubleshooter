@@ -1,5 +1,4 @@
 import json
-from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 from backend import app as module
 
@@ -22,30 +21,12 @@ def test_read_reports_and_path_traversal(tmp_path, monkeypatch):
     assert response.headers['cache-control']=='no-store'
     assert client.post('/api/analyze',headers=headers,json={'server_id':'../../secrets'}).status_code==404
 
-def test_ollama_failure_is_explicit(tmp_path, monkeypatch):
-    monkeypatch.setattr(module,'DATA',tmp_path)
-    (tmp_path/'lab.json').write_text(json.dumps({'schemaVersion':1,'id':'lab'}))
-    import httpx
-    with patch.object(httpx.AsyncClient,'post',new=AsyncMock(side_effect=httpx.ConnectError('offline'))):
-        response=client.post('/api/analyze',headers=headers,json={'server_id':'lab'})
-        assert response.status_code==503
-        assert 'Ollama unavailable' in response.json()['detail']
+def test_empty_report_directory(tmp_path, monkeypatch):
+    monkeypatch.setattr(module, 'DATA', tmp_path)
+    assert client.get('/api/reports',headers=headers).json()==[]
 
-def test_analysis_fixed_local_destination(tmp_path, monkeypatch):
-    monkeypatch.setattr(module,'DATA',tmp_path)
-    (tmp_path/'lab.json').write_text(json.dumps({'schemaVersion':1,'id':'lab'}))
-    import httpx
-    response=httpx.Response(200,json={'response':'Evidence-based next steps'},request=httpx.Request('POST','http://127.0.0.1:11434/api/generate'))
-    with patch.object(httpx.AsyncClient,'post',new=AsyncMock(return_value=response)) as post:
-        result=client.post('/api/analyze',headers=headers,json={'server_id':'lab'})
-        assert result.status_code==200
-        assert result.json()['simulated'] is False
-        assert post.call_args.args[0]=='http://127.0.0.1:11434/api/generate'
-        assert post.call_args.kwargs['json']['stream'] is False
-
-def test_missing_body_and_health():
-    assert client.post('/api/analyze',headers=headers,json={}).status_code==422
-    assert client.get('/api/health').json()['mode']=='local'
+def test_health_endpoint():
+    assert client.get('/api/health').json()=={'status':'ok','mode':'local','application':'Server Health Check'}
 
 def test_no_remote_execution_route():
     assert client.post('/api/collect',headers=headers,json={'computer':'server'}).status_code==404

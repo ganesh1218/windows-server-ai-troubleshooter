@@ -1,10 +1,14 @@
-# ServerScope — Windows Server AI Troubleshooter
+# ServerScope — Windows Server Health Check
 
-PowerShell 5.1 remote diagnostics, a private FastAPI service, a React dashboard, and local Ollama analysis. The public demo contains **fictional data and prerecorded analysis only**. It has no remote-management backend.
+PowerShell 5.1 remote diagnostics, a private FastAPI service, and a React Server Health Check dashboard with deterministic threshold checks. The public demo contains **fictional health data only**. It has no remote-management backend.
+
+[Public simulated demo](https://windows-server-ai-troubleshooter.politerose12.chatgpt.site)
+
+The existing repository and demo addresses are retained for continuity. The application is now a Server Health Check and has no model dependency.
 
 ## Install locally on Windows
 
-Use a trusted Windows management workstation with Windows PowerShell 5.1, Python 3.11+, Node.js 22+, Git and [Ollama](https://ollama.com/download/windows). Remote targets should be supported Windows Server installations with appropriate CIM/WMI providers. Remote execution has not been verified against a real Windows Server during development.
+Use a trusted Windows management workstation with Windows PowerShell 5.1, Python 3.11+, Node.js 22+ and Git. Remote targets should be supported Windows Server installations with appropriate CIM/WMI providers. Remote execution has not been verified against a real Windows Server during development.
 
 ```powershell
 git clone https://github.com/ganesh1218/windows-server-ai-troubleshooter.git
@@ -13,10 +17,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
 npm.cmd ci
 npm.cmd run build
-ollama pull llama3.2:3b
 ```
-
-Start Ollama normally; leave its API bound to loopback. Pulling a model requires internet, but analysis uses only the local endpoint. This app does not use Ollama cloud models.
 
 From **Windows PowerShell 5.1** on the management workstation:
 
@@ -32,16 +33,15 @@ The default report directory is `private-data/` (ignored by Git), protected with
 .\.venv\Scripts\python.exe -m backend.app
 ```
 
-Open **http://127.0.0.1:8000/?local=1**, enter the session token printed in the terminal, and click **Load private reports**. Select a server and click **Analyze with Ollama**. Tokens and reports are held in browser memory, never localStorage. A new random token is generated each launch. The terminal token is sensitive; do not share terminal captures.
+Open **http://127.0.0.1:8000/?local=1**, enter the session token printed in the terminal, and click **Load private reports**. Select a server to review CPU, RAM, every drive, RDP, patches, services, event logs and reboot evidence. Health findings are computed automatically from the snapshot. Tokens and reports are held in browser memory, never localStorage. A new random token is generated each launch. The terminal token is sensitive; do not share terminal captures.
 
 Optional configuration before starting the backend:
 
 ```powershell
-$env:OLLAMA_MODEL = 'llama3.2:3b' # a locally installed model
 $env:DIAGNOSTIC_DIR = 'D:\RestrictedReports'
 ```
 
-`APP_TOKEN` can provide a strong session token from the process environment for managed deployments; never commit an environment file. The Ollama destination is intentionally fixed to `http://127.0.0.1:11434/api/generate`.
+`APP_TOKEN` can provide a strong session token from the process environment for managed deployments; never commit an environment file. 
 
 ## What it collects
 
@@ -53,7 +53,7 @@ $env:DIAGNOSTIC_DIR = 'D:\RestrictedReports'
 * Last 7 days of System/Application warnings and errors, capped at 100 returned records per report category. `-Days` supports 1–30 days.
 * Reboot/shutdown evidence: USER32 1074, EventLog 6005/6006/6008, Kernel-Power 41 and lifecycle 12/13. 1074 insertion strings provide the initiating account when available. Other records may have no account. Event creation timestamps are normalized to UTC, not presented as precise shutdown times. Multiple records can describe the same incident; no cause is inferred from 41/6008 alone.
 
-Collection failures are explicit per section. An unavailable value is **unknown**, never healthy. Queries may be expensive on large event logs; use short windows and least-privilege accounts with remote CIM and event-log read rights. The collector does not perform remediation. AI suggestions are advisory and require operator review.
+Collection failures are explicit per section. An unavailable value is **unknown**, never healthy. Queries may be expensive on large event logs; use short windows and least-privilege accounts with remote CIM and event-log read rights. The collector does not perform remediation. Health findings are advisory and require operator review.
 
 ## Network and privacy boundary
 
@@ -62,16 +62,15 @@ Trusted operator workstation
   PowerShell secure prompt -> private WinRM -> Windows Server
                            -> private DCOM fallback
   private-data/*.json -> loopback FastAPI -> local browser
-                         -> loopback Ollama
 
 Public static demo -> bundled simulated fixtures only
 ```
 
-Keep FastAPI on `127.0.0.1:8000` and Ollama on `127.0.0.1:11434`. Do not publish either through a reverse proxy or tunnel. API requests require a Bearer token; remote clients, unexpected Host headers, and cross-origin browser requests are rejected. No CORS wildcard, upload, shell execution or remote collection route exists. Access logs are disabled and report responses use `Cache-Control: no-store`.
+Keep FastAPI on `127.0.0.1:8000`. Do not publish the local API through a reverse proxy or tunnel. API requests require a Bearer token; remote clients, unexpected Host headers, and cross-origin browser requests are rejected. No CORS wildcard, upload, shell execution or remote collection route exists. Access logs are disabled and report responses use `Cache-Control: no-store`.
 
 Within the private network, scope WinRM HTTPS (5986), or domain WinRM (5985), to the management workstation. DCOM requires RPC 135 and the organization's restricted RPC dynamic-port policy; it is not a firewall bypass. Domain policy and least-privilege permissions must be configured by your administrators. Remote UAC, provider availability, firewall policy and authentication can prevent collection. The app does not modify those settings.
 
-Reports contain hostnames, account names and event messages. Protect them at rest, apply your retention policy, and review exported JSON before sharing. `.gitignore` helps avoid accidental commits; it is not an access-control mechanism. Never replace public fixture files with actual reports. Local models receive selected report content; event messages are treated as untrusted evidence and no AI output is executed.
+Reports contain hostnames, account names and event messages. Protect them at rest, apply your retention policy, and review exported JSON before sharing. `.gitignore` helps avoid accidental commits; it is not an access-control mechanism. Never replace public fixture files with actual reports. Report messages are displayed as text and never executed. Health checks use fixed thresholds: CPU and RAM at 85% used, and drive capacity at 85% used. Missing metrics are shown as unknown.
 
 ## Demo and development
 
@@ -82,7 +81,7 @@ npm.cmd run dev
 
 The Vite development UI uses simulated reports. The private mode must be served by FastAPI at port 8000 after `npm run build`; it deliberately rejects other origins. The default landing view remains a clearly labeled demo even when served locally; the backend prints the private-mode URL.
 
-`src/sample.js` and `samples/diagnostics.simulated.json` contain three fictional LAB servers. KB identifiers are deliberately fictional. The demo's analysis is prerecorded, not a live AI result. The demo supports server selection, section navigation, filtering, JSON export, the collection guide and sample analysis.
+`src/sample.js` and `samples/diagnostics.simulated.json` contain three fictional LAB servers. KB identifiers are deliberately fictional. The dashboard requires no model download or model service. The demo supports server selection, section navigation, filtering, JSON export, the collection guide and automatic health checks.
 
 ## Tests
 
@@ -93,12 +92,12 @@ npm.cmd run build
 powershell.exe -NoProfile -File tests\Test-Collector.ps1
 ```
 
-JavaScript tests cover drive sorting, unknown capacity, findings and simulated fixtures. Python tests cover token/Host/Origin boundaries, parsing, missing reports, fixed local Ollama destination, API validation and model failure. PowerShell checks parser compatibility and collector safety contracts. CI runs these on Windows, using Windows PowerShell for the collector checks. Real remote WinRM/DCOM and actual model inference require your environment and are not covered by mocked tests.
+JavaScript tests cover drive sorting, unknown capacity, findings and simulated fixtures. Python tests cover token/Host/Origin boundaries, parsing, missing reports, the report-only API boundary and health endpoint. PowerShell checks parser compatibility and collector safety contracts. CI runs these on Windows, using Windows PowerShell for the collector checks. Real remote WinRM/DCOM requires your environment and is not covered by these tests.
 
 ## Architecture
 
 * `scripts/Collect-Diagnostics.ps1`: PowerShell 5.1 console-only collection and private JSON output.
-* `backend/app.py`: local report API, fixed local Ollama client and static production frontend.
+* `backend/app.py`: local report API and static production frontend.
 * `src/`: React UI, simulated fixtures and deterministic threshold findings.
 * `tests/`: automated data, backend and collector contract checks.
 * `.openai/hosting.json`: public static demo deployment metadata; only `dist/` is hosted.
@@ -107,4 +106,4 @@ See [SECURITY.md](SECURITY.md) for limitations. MIT licensed. No warranty.
 
 ## References
 
-[Microsoft CIM sessions and DCOM fallback](https://learn.microsoft.com/en-us/powershell/module/cimcmdlets/new-cimsession?view=powershell-5.1), [Microsoft unexpected reboot investigation](https://learn.microsoft.com/en-us/troubleshoot/windows-server/performance/troubleshoot-unexpected-reboots-system-event-logs), [Ollama local generation API](https://docs.ollama.com/api/generate).
+[Microsoft CIM sessions and DCOM fallback](https://learn.microsoft.com/en-us/powershell/module/cimcmdlets/new-cimsession?view=powershell-5.1), [Microsoft unexpected reboot investigation](https://learn.microsoft.com/en-us/troubleshoot/windows-server/performance/troubleshoot-unexpected-reboots-system-event-logs).

@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sortedDrives,percentUsed,findings} from '../src/model.js';
+import {sortedDrives,percentUsed,findings,healthChecks} from '../src/model.js';
 import {samples} from '../src/sample.js';
 test('C: precedes alphabetically sorted drives without mutating input',()=>{const drives=[{name:'Z:'},{name:'D:'},{name:'C:'}];assert.deepEqual(sortedDrives(drives).map(d=>d.name),['C:','D:','Z:']);assert.equal(drives[0].name,'Z:')});
 test('capacity unknown for empty media or missing free bytes',()=>{assert.equal(percentUsed({totalGB:0,freeGB:0}),null);assert.equal(percentUsed({totalGB:100,freeGB:null}),null);assert.equal(percentUsed({totalGB:100,freeGB:0}),100)});
 test('unknown metrics are never inferred as healthy',()=>{assert.equal(findings({errors:[{section:'memory'}]}).at(-1).severity,'Unknown')});
 test('sample data remain explicitly simulated and contain expected findings',()=>{assert.ok(samples.every(s=>s.simulated));assert.ok(findings(samples[0]).some(f=>f.title==='Low space on C:'));assert.ok(findings(samples[1]).some(f=>f.title==='CPU pressure'));assert.equal(findings(samples[2]).length,0)});
 test('duplicate event evidence is not represented as incident count',()=>{assert.match(findings(samples[0]).find(f=>f.title==='Unexpected shutdown evidence').detail,/same incident/)});
+test('health checks preserve unknowns and flag pressure',()=>{const checks=healthChecks(samples[1]);assert.equal(checks.find(c=>c.name==='CPU utilization').state,'Review');assert.equal(checks.find(c=>c.name==='Remote Desktop').state,'Unknown');assert.equal(healthChecks({}).find(c=>c.name==='Drive capacity').state,'Unknown')});
+test('health thresholds include boundary values',()=>{assert.equal(healthChecks({cpu:85})[0].state,'Review');assert.equal(healthChecks({cpu:84})[0].state,'Passing');assert.equal(healthChecks({drives:[{name:'C:',totalGB:100,freeGB:null}]}).find(c=>c.name==='Drive capacity').state,'Unknown')});
