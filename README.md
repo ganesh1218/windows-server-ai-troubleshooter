@@ -16,7 +16,15 @@ ServerScope provides a browser dashboard for read-only Windows Server diagnostic
 
 ## Use the website as your dashboard
 
-Start `Start-HealthCheck.cmd` on your Windows management computer. Open **https://wshc.ganesh18.dpdns.org**, enter the session code printed in the PowerShell window, and click **Pair local service**. Allow local network access if your browser requests it. Then enter the server name/IP and credentials on the website to view live health details there. No package prompt or page redirect is needed.
+Open Windows PowerShell in the project folder and run:
+
+```powershell
+.\scripts\Start-HealthCheck.ps1 -NoBrowser
+```
+
+Keep that window open. Open **https://wshc.ganesh18.dpdns.org**, enter the server name/IP, and click **Continue to authentication**. The website checks for the local PowerShell service. If it is unavailable, the page asks you to start it and retry. Opening PowerShell alone is insufficient; the command above starts the service.
+
+When the service is found, enter its printed session code and click **Pair local service**. Then enter your Windows credentials and click **Connect & check health** to view live results on the website. Allow local network access if your browser requests it. No CMD launcher, package prompt or page redirect is needed.
 
 The browser sends diagnostic requests directly to `http://127.0.0.1:8000`, never to Cloudflare. The service permits only this exact website origin and requires its random per-process session code. Codes and credentials are not saved in browser storage. Restarting the service invalidates the code. Browsers or enterprise policies that block HTTPS-to-loopback connections can use the local dashboard instead. The local project and service must already be present and running.
 
@@ -24,11 +32,11 @@ Push changes to GitHub **main** to update the public website automatically throu
 
 ## Local dashboard fallback
 
-Run `Start-HealthCheck.cmd` and open **http://127.0.0.1:8000/** to use the same dashboard directly on localhost. No additional runtime installation is needed. A browser cannot start PowerShell, so keep the local service running while using either dashboard.
+Run the PowerShell command above and open **http://127.0.0.1:8000/** to use the same dashboard directly on localhost. No additional runtime installation is needed. A browser cannot start PowerShell, so keep the local service running while using either dashboard.
 
 ## Connect to a server
 
-1. Start **Start-HealthCheck.cmd** from the project folder on your Windows management workstation.
+1. Run `.\scripts\Start-HealthCheck.ps1 -NoBrowser` in PowerShell from the project folder on your Windows management workstation.
 2. Open **http://127.0.0.1:8000/** if the browser does not open automatically.
 3. Enter the target server name/IP, username such as `DOMAIN\username`, and password. Click **Connect & check health**.
 
@@ -149,7 +157,6 @@ Real WinRM/DCOM connections and shared HTTPS/domain authentication require your 
 
 | Path | Purpose |
 | --- | --- |
-| `Start-HealthCheck.cmd` | Windows PowerShell launcher |
 | `dashboard.zip` | Prebuilt browser dashboard; no runtime build required |
 | `scripts/Start-HealthCheck.ps1` | Built-in HTTP.sys/HttpListener web host |
 | `scripts/Server.Core.psm1` | Authentication, request routing and bounded collector process |

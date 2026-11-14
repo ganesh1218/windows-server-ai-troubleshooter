@@ -6,7 +6,7 @@ The runtime is Windows PowerShell 5.1 plus Windows built-in .NET/HTTP.sys. The b
 
 ## Local workstation
 
-Double-click `Start-HealthCheck.cmd`, or run `scripts\Start-HealthCheck.ps1` in Windows PowerShell. The default URL is `http://127.0.0.1:8000/`. The server rejects remote clients in this mode.
+Open Windows PowerShell in the project folder and run `.\scripts\Start-HealthCheck.ps1 -NoBrowser`. Keep the window open. Use the public website's service check and session-code pairing, or open `http://127.0.0.1:8000/` directly. The server rejects remote clients in this mode.
 
 If access is denied, an administrator can reserve the exact loopback URL for the operator. Replace the example account with the real account; do not grant Everyone:
 
