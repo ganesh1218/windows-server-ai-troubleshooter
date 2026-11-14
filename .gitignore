@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+private-data/
+.env*
+*.log
+*.zip
+*.tar.gz
+.sites-local/

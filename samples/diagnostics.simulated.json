@@ -1,0 +1,381 @@
+[
+  {
+    "schemaVersion": 1,
+    "simulated": true,
+    "collectedAt": "2026-11-14T07:20:00Z",
+    "transport": "WinRM",
+    "patches": [
+      {
+        "id": "KB5000001",
+        "description": "Simulated security update",
+        "installedOn": "2026-11-11",
+        "installedBy": "LAB\\patch-operator"
+      },
+      {
+        "id": "KB5000002",
+        "description": "Simulated cumulative update",
+        "installedOn": "2026-10-15",
+        "installedBy": "NT AUTHORITY\\SYSTEM"
+      }
+    ],
+    "services": [
+      {
+        "name": "TermService",
+        "displayName": "Remote Desktop Services",
+        "state": "Running",
+        "startMode": "Manual"
+      },
+      {
+        "name": "WinRM",
+        "displayName": "Windows Remote Management",
+        "state": "Running",
+        "startMode": "Auto"
+      },
+      {
+        "name": "W32Time",
+        "displayName": "Windows Time",
+        "state": "Running",
+        "startMode": "Auto"
+      },
+      {
+        "name": "Spooler",
+        "displayName": "Print Spooler",
+        "state": "Stopped",
+        "startMode": "Auto"
+      },
+      {
+        "name": "wuauserv",
+        "displayName": "Windows Update",
+        "state": "Stopped",
+        "startMode": "Manual"
+      }
+    ],
+    "rdp": {
+      "enabled": true,
+      "serviceState": "Running",
+      "tcp3389": true,
+      "nlaRequired": true,
+      "note": "TCP 3389 reachable from collector. Login and firewall policy not tested."
+    },
+    "events": [
+      {
+        "id": 2013,
+        "source": "Srv",
+        "level": "Warning",
+        "timestamp": "2026-11-14T07:12:10Z",
+        "message": "Simulated: the C: volume is approaching its capacity threshold.",
+        "account": null
+      },
+      {
+        "id": 7036,
+        "source": "Service Control Manager",
+        "level": "Information",
+        "timestamp": "2026-11-14T06:48:01Z",
+        "message": "Simulated: Print Spooler entered the stopped state.",
+        "account": "NT AUTHORITY\\SYSTEM"
+      },
+      {
+        "id": 6008,
+        "source": "EventLog",
+        "level": "Error",
+        "timestamp": "2026-11-13T22:05:32Z",
+        "message": "Simulated: the previous system shutdown was unexpected.",
+        "account": null
+      }
+    ],
+    "reboots": [
+      {
+        "id": 6005,
+        "source": "EventLog",
+        "kind": "Lifecycle event",
+        "timestamp": "2026-11-13T22:05:30Z",
+        "account": null,
+        "message": "Simulated: Event log service started. This is a boot proxy, not a precise boot time."
+      },
+      {
+        "id": 41,
+        "source": "Microsoft-Windows-Kernel-Power",
+        "kind": "Unexpected shutdown evidence",
+        "timestamp": "2026-11-13T22:05:28Z",
+        "account": null,
+        "message": "Simulated: system rebooted without cleanly shutting down. Root cause and initiating account are unknown."
+      },
+      {
+        "id": 6008,
+        "source": "EventLog",
+        "kind": "Unexpected shutdown evidence",
+        "timestamp": "2026-11-13T22:05:32Z",
+        "account": null,
+        "message": "Simulated: previous shutdown was unexpected. Timestamp is record creation, not necessarily shutdown time."
+      },
+      {
+        "id": 1074,
+        "source": "USER32",
+        "kind": "Planned action",
+        "timestamp": "2026-11-11T02:10:04Z",
+        "account": "LAB\\patch-operator",
+        "message": "Simulated: shutdown.exe initiated a planned restart for maintenance."
+      }
+    ],
+    "errors": [],
+    "id": "lab-app-01",
+    "name": "LAB-APP-01",
+    "role": "Application server",
+    "cpu": 34,
+    "memory": {
+      "totalGB": 32,
+      "usedGB": 22.4,
+      "usedPercent": 70
+    },
+    "drives": [
+      {
+        "name": "C:",
+        "label": "System",
+        "totalGB": 120,
+        "freeGB": 8.4
+      },
+      {
+        "name": "D:",
+        "label": "Application data",
+        "totalGB": 500,
+        "freeGB": 284
+      },
+      {
+        "name": "E:",
+        "label": "Backups",
+        "totalGB": 1000,
+        "freeGB": 620
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "simulated": true,
+    "collectedAt": "2026-11-14T07:20:00Z",
+    "transport": "DCOM",
+    "patches": [
+      {
+        "id": "KB5000001",
+        "description": "Simulated security update",
+        "installedOn": "2026-11-11",
+        "installedBy": "LAB\\patch-operator"
+      },
+      {
+        "id": "KB5000002",
+        "description": "Simulated cumulative update",
+        "installedOn": "2026-10-15",
+        "installedBy": "NT AUTHORITY\\SYSTEM"
+      }
+    ],
+    "services": [
+      {
+        "name": "TermService",
+        "displayName": "Remote Desktop Services",
+        "state": "Running",
+        "startMode": "Manual"
+      },
+      {
+        "name": "WinRM",
+        "displayName": "Windows Remote Management",
+        "state": "Running",
+        "startMode": "Auto"
+      },
+      {
+        "name": "W32Time",
+        "displayName": "Windows Time",
+        "state": "Running",
+        "startMode": "Auto"
+      },
+      {
+        "name": "wuauserv",
+        "displayName": "Windows Update",
+        "state": "Stopped",
+        "startMode": "Manual"
+      }
+    ],
+    "rdp": null,
+    "events": [
+      {
+        "id": 2013,
+        "source": "Srv",
+        "level": "Warning",
+        "timestamp": "2026-11-14T07:12:10Z",
+        "message": "Simulated: the C: volume is approaching its capacity threshold.",
+        "account": null
+      },
+      {
+        "id": 7036,
+        "source": "Service Control Manager",
+        "level": "Information",
+        "timestamp": "2026-11-14T06:48:01Z",
+        "message": "Simulated: Print Spooler entered the stopped state.",
+        "account": "NT AUTHORITY\\SYSTEM"
+      },
+      {
+        "id": 6008,
+        "source": "EventLog",
+        "level": "Error",
+        "timestamp": "2026-11-13T22:05:32Z",
+        "message": "Simulated: the previous system shutdown was unexpected.",
+        "account": null
+      }
+    ],
+    "reboots": [
+      {
+        "id": 6005,
+        "source": "EventLog",
+        "kind": "Lifecycle event",
+        "timestamp": "2026-11-13T22:05:30Z",
+        "account": null,
+        "message": "Simulated: Event log service started. This is a boot proxy, not a precise boot time."
+      },
+      {
+        "id": 41,
+        "source": "Microsoft-Windows-Kernel-Power",
+        "kind": "Unexpected shutdown evidence",
+        "timestamp": "2026-11-13T22:05:28Z",
+        "account": null,
+        "message": "Simulated: system rebooted without cleanly shutting down. Root cause and initiating account are unknown."
+      },
+      {
+        "id": 6008,
+        "source": "EventLog",
+        "kind": "Unexpected shutdown evidence",
+        "timestamp": "2026-11-13T22:05:32Z",
+        "account": null,
+        "message": "Simulated: previous shutdown was unexpected. Timestamp is record creation, not necessarily shutdown time."
+      },
+      {
+        "id": 1074,
+        "source": "USER32",
+        "kind": "Planned action",
+        "timestamp": "2026-11-11T02:10:04Z",
+        "account": "LAB\\patch-operator",
+        "message": "Simulated: shutdown.exe initiated a planned restart for maintenance."
+      }
+    ],
+    "errors": [
+      {
+        "section": "rdp",
+        "message": "Simulated: terminal services namespace access denied."
+      }
+    ],
+    "id": "lab-db-01",
+    "name": "LAB-DB-01",
+    "role": "Database server",
+    "cpu": 89,
+    "memory": {
+      "totalGB": 64,
+      "usedGB": 57.6,
+      "usedPercent": 90
+    },
+    "drives": [
+      {
+        "name": "D:",
+        "label": "Databases",
+        "totalGB": 1000,
+        "freeGB": 320
+      },
+      {
+        "name": "C:",
+        "label": "System",
+        "totalGB": 160,
+        "freeGB": 68
+      },
+      {
+        "name": "L:",
+        "label": "Transaction logs",
+        "totalGB": 500,
+        "freeGB": 172
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "simulated": true,
+    "collectedAt": "2026-11-14T07:20:00Z",
+    "transport": "WinRM",
+    "patches": [
+      {
+        "id": "KB5000001",
+        "description": "Simulated security update",
+        "installedOn": "2026-11-11",
+        "installedBy": "LAB\\patch-operator"
+      },
+      {
+        "id": "KB5000002",
+        "description": "Simulated cumulative update",
+        "installedOn": "2026-10-15",
+        "installedBy": "NT AUTHORITY\\SYSTEM"
+      }
+    ],
+    "services": [
+      {
+        "name": "TermService",
+        "displayName": "Remote Desktop Services",
+        "state": "Running",
+        "startMode": "Manual"
+      },
+      {
+        "name": "WinRM",
+        "displayName": "Windows Remote Management",
+        "state": "Running",
+        "startMode": "Auto"
+      },
+      {
+        "name": "W32Time",
+        "displayName": "Windows Time",
+        "state": "Running",
+        "startMode": "Auto"
+      },
+      {
+        "name": "wuauserv",
+        "displayName": "Windows Update",
+        "state": "Stopped",
+        "startMode": "Manual"
+      }
+    ],
+    "rdp": {
+      "enabled": true,
+      "serviceState": "Running",
+      "tcp3389": true,
+      "nlaRequired": true,
+      "note": "TCP 3389 reachable from collector. Login and firewall policy not tested."
+    },
+    "events": [],
+    "reboots": [
+      {
+        "id": 1074,
+        "source": "USER32",
+        "kind": "Planned action",
+        "timestamp": "2026-11-11T02:10:04Z",
+        "account": "LAB\\patch-operator",
+        "message": "Simulated: shutdown.exe initiated a planned restart for maintenance."
+      }
+    ],
+    "errors": [],
+    "id": "lab-web-01",
+    "name": "LAB-WEB-01",
+    "role": "Web server",
+    "cpu": 18,
+    "memory": {
+      "totalGB": 16,
+      "usedGB": 6.4,
+      "usedPercent": 40
+    },
+    "drives": [
+      {
+        "name": "C:",
+        "label": "System",
+        "totalGB": 100,
+        "freeGB": 62
+      },
+      {
+        "name": "D:",
+        "label": "Web content",
+        "totalGB": 250,
+        "freeGB": 174
+      }
+    ]
+  }
+]
