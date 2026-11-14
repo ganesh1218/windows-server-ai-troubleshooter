@@ -1,19 +1,23 @@
 #requires -Version 5.1
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory=$true)][ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}$')][string[]]$ComputerName,
+    [Parameter(Mandatory=$true)][ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9.:-]{0,252}$')][string[]]$ComputerName,
     [string]$OutputDirectory = (Join-Path $PSScriptRoot '../private-data'),
     [switch]$UseSSL,
-    [ValidateRange(1,30)][int]$Days = 7
+    [ValidateRange(1,30)][int]$Days = 7,
+    [System.Management.Automation.PSCredential]$Credential,
+    [switch]$NoPersist
 )
 $ErrorActionPreference = 'Stop'
-$credential = Get-Credential -Message 'Remote diagnostic account (never saved)'
+if (-not $Credential) { $Credential = Get-Credential -Message 'Remote diagnostic account (never saved)' }
 if (-not $credential) { throw 'Credentials are required.' }
+if (-not $NoPersist) {
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 # Restrict private reports to the current operator and SYSTEM before writing.
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 & icacls.exe $OutputDirectory /inheritance:r /grant:r "${identity}:(OI)(CI)F" 'SYSTEM:(OI)(CI)F' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Could not protect output directory ACL.' }
+}
 try {
 foreach ($computer in $ComputerName) {
     $session = $null; $transport = 'WinRM'; $errors = [System.Collections.Generic.List[object]]::new()
@@ -57,7 +61,11 @@ foreach ($computer in $ComputerName) {
         } })
     } catch { $errors.Add(@{section='connection';message='Connection failed on both transports. No credentials or raw exceptions saved.'}) }
     finally { if($session){Remove-CimSession $session}; $report.errors=@($errors.ToArray()) }
-    $path=Join-Path $OutputDirectory ($computer+'.json'); $temp=$path+'.tmp'
+    if ($NoPersist) {
+        $report | ConvertTo-Json -Depth 12 -Compress
+        continue
+    }
+    $path=Join-Path $OutputDirectory ($computer.Replace(':','_')+'.json'); $temp=$path+'.tmp'
     $report | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $temp -Encoding UTF8
     Move-Item -LiteralPath $temp -Destination $path -Force
     Write-Host "Saved private report for $computer ($transport)."

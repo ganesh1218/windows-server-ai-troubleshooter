@@ -1,17 +1,24 @@
-"""Loopback-only private report viewer. No remote execution or credential endpoints."""
+"""Authenticated loopback-only Windows health collection and report viewer."""
 import json
 import os
 import secrets
+import ipaddress
+import re
+import subprocess
+import threading
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.concurrency import run_in_threadpool
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path(os.getenv('DIAGNOSTIC_DIR', str(ROOT / 'private-data'))).resolve()
 TOKEN = os.getenv('APP_TOKEN') or secrets.token_urlsafe(32)
+LIVE_REPORTS = {}
+COLLECTION_LOCK = threading.Lock()
 app = FastAPI(title='ServerScope local API', docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=['127.0.0.1', 'localhost', 'testserver'])
 
@@ -48,7 +55,68 @@ def reports():
 
 @app.get('/api/reports', dependencies=[Depends(authorize)])
 def get_reports():
-    return reports()
+    return list({r['id']: r for r in reports() + list(LIVE_REPORTS.values())}.values())
+
+def valid_target(target):
+    try:
+        ipaddress.ip_address(target)
+        return True
+    except ValueError:
+        return bool(len(target) <= 253 and all(re.fullmatch(r'[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?', label) for label in target.split('.')))
+
+def run_collection(payload):
+    if os.name != 'nt':
+        raise HTTPException(503, 'Live collection requires a Windows workstation with PowerShell 5.1.')
+    if not COLLECTION_LOCK.acquire(blocking=False):
+        raise HTTPException(409, 'A health check is already running. Wait for it to finish.')
+    try:
+        executable = Path(os.environ.get('SystemRoot', r'C:\Windows')) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
+        result = subprocess.run(
+            [str(executable), '-NoProfile', '-NonInteractive', '-File', str(ROOT / 'scripts/Invoke-HealthCheck.ps1')],
+            input=json.dumps(payload), capture_output=True, text=True, encoding='utf-8',
+            timeout=180, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0), check=False)
+        if result.returncode:
+            raise HTTPException(502, 'Collection failed. Check credentials, PowerShell execution policy, connectivity and remote permissions.')
+        report = json.loads(result.stdout.lstrip('\ufeff').strip())
+        if report.get('schemaVersion') != 1 or report.get('id') != payload['target']:
+            raise ValueError('Invalid collector output')
+        if any(e.get('section') == 'connection' for e in report.get('errors', [])):
+            raise HTTPException(502, 'Unable to connect using WinRM or DCOM. Verify the server address, credentials, firewall and remote permissions.')
+        report['simulated'] = False
+        LIVE_REPORTS[report['id']] = report
+        return report
+    except subprocess.TimeoutExpired:
+        raise HTTPException(504, 'Health check timed out after 180 seconds. Verify connectivity and try a shorter event window using the console collector.') from None
+    except (OSError, ValueError, AttributeError):
+        raise HTTPException(502, 'The Windows collector could not return a valid report.') from None
+    finally:
+        payload.clear()
+        COLLECTION_LOCK.release()
+
+@app.post('/api/connect', dependencies=[Depends(authorize)])
+async def connect(request: Request):
+    # Parse manually so validation errors never echo submitted passwords.
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > 16384:
+            raise HTTPException(413, 'Connection request is too large.')
+    try:
+        payload = json.loads(body)
+        if not isinstance(payload, dict):
+            raise ValueError()
+        target = payload.get('target', '')
+        username = payload.get('username', '')
+        password = payload.get('password', '')
+        use_ssl = payload.get('use_ssl', True)
+        if not isinstance(target, str) or not valid_target(target) or not isinstance(username, str) or not 1 <= len(username) <= 256 or not isinstance(password, str) or not 1 <= len(password) <= 4096 or type(use_ssl) is not bool:
+            raise ValueError()
+        clean = {'target': target, 'username': username, 'password': password, 'use_ssl': use_ssl}
+    except (ValueError, TypeError):
+        raise HTTPException(400, 'Enter a valid server name or IP, username, password and connection option.') from None
+    finally:
+        body.clear()
+    return await run_in_threadpool(run_collection, clean)
 
 @app.get('/api/health')
 def health():
