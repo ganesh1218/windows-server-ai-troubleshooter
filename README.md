@@ -14,9 +14,17 @@ Production settings: branch `main`, build command `npm run build`, output direct
 
 ServerScope provides a browser dashboard for read-only Windows Server diagnostics. Enter a server name or IP and Windows credentials; the PowerShell backend collects a fresh snapshot through WinRM with WMI/DCOM fallback. The prebuilt React dashboard is included in `dashboard.zip`.
 
-## Run on localhost
+## Use the website as your dashboard
 
-For an existing checkout, run `Start-HealthCheck.cmd` and open **http://127.0.0.1:8000/**. Enter the server name/IP and credentials there to collect live health details. The public website provides an **Open local dashboard** link; it never receives those details. No additional runtime installation is needed. A browser cannot start PowerShell, so keep the local service running while using the dashboard.
+Start `Start-HealthCheck.cmd` on your Windows management computer. Open **https://wshc.ganesh18.dpdns.org**, enter the session code printed in the PowerShell window, and click **Pair local service**. Allow local network access if your browser requests it. Then enter the server name/IP and credentials on the website to view live health details there. No package prompt or page redirect is needed.
+
+The browser sends diagnostic requests directly to `http://127.0.0.1:8000`, never to Cloudflare. The service permits only this exact website origin and requires its random per-process session code. Codes and credentials are not saved in browser storage. Restarting the service invalidates the code. Browsers or enterprise policies that block HTTPS-to-loopback connections can use the local dashboard instead. The local project and service must already be present and running.
+
+Push changes to GitHub **main** to update the public website automatically through Cloudflare Pages. Other branches are not production deployments. Wait for the Pages build to succeed before expecting the update. Local PowerShell code runs from your project folder and does not update when the public website deploys; administrators must update that folder and restart the service when backend code changes.
+
+## Local dashboard fallback
+
+Run `Start-HealthCheck.cmd` and open **http://127.0.0.1:8000/** to use the same dashboard directly on localhost. No additional runtime installation is needed. A browser cannot start PowerShell, so keep the local service running while using either dashboard.
 
 ## Connect to a server
 
@@ -61,7 +69,7 @@ HTTP shared hosting, wildcard listener prefixes, missing Windows identities and 
 
 The listener handles requests serially, including one collection at a time. Other browser requests can wait while a check runs. This is a small administrative tool, not a high-concurrency monitoring platform. Shared HTTPS/domain authentication still needs validation in your environment.
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for administrator configuration examples and [SECURITY.md](SECURITY.md) for the boundary. The public hosted page contains setup guidance and optional fictional preview data; it cannot access private servers or execute PowerShell.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for administrator configuration examples and [SECURITY.md](SECURITY.md) for the boundary. The public dashboard sends real diagnostics directly to a paired local service. Cloudflare does not execute PowerShell or receive diagnostic API requests.
 
 ## What it checks
 

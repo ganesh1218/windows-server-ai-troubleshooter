@@ -67,7 +67,8 @@ function Invoke-HealthRequest {
     param([hashtable]$State,[hashtable]$Request,[scriptblock]$Collector)
     $headers=$Request.Headers
     if ($headers['Host'] -ne $State.Authority) {return New-HealthResponse 400 @{detail='Unexpected Host header.'}}
-    if ($headers['Origin'] -and $headers['Origin'] -ne $State.Origin) {return New-HealthResponse 403 @{detail='Origin denied.'}}
+    $websiteRequest=($headers['Origin'] -eq 'https://wshc.ganesh18.dpdns.org' -and -not $State.AllowRemote -and $Request.Path -in @('/api/connect','/api/reports','/api/health'))
+    if ($headers['Origin'] -and $headers['Origin'] -ne $State.Origin -and -not $websiteRequest) {return New-HealthResponse 403 @{detail='Origin denied.'}}
     if ($State.AllowRemote) {
         if (-not $Request.IsSecure -or -not $Request.Identity -or $State.AllowedUsers -notcontains $Request.Identity) {
             return New-HealthResponse 403 @{detail='HTTPS and an allowed Windows identity are required.'}
@@ -80,6 +81,7 @@ function Invoke-HealthRequest {
         }
         $owner='local'
     }
+    if ($Request.Method -eq 'OPTIONS' -and $websiteRequest) {return New-HealthResponse -Status 204 -Text ''}
     if ($Request.Method -eq 'GET' -and $Request.Path -eq '/api/health') {
         return New-HealthResponse 200 @{status='ok';mode='powershell';application='Server Health Check';version='2.0.0'}
     }

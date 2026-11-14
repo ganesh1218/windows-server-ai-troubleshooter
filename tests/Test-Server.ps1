@@ -26,6 +26,20 @@ $response=Request -path '/assets/../../scripts/Invoke-HealthCheck.ps1'
 Assert ($response.Status -eq 404) 'arbitrary file access denied'
 $response=Request -path '/api/reports'
 Assert ($response.Text -eq '[]') 'empty report array'
+$websiteHeaders=@{Host='127.0.0.1:8000';Origin='https://wshc.ganesh18.dpdns.org'}
+$response=Request OPTIONS '/api/reports' -extra @{Headers=$websiteHeaders}
+Assert ($response.Status -eq 204) 'website preflight accepted on loopback'
+$response=Request -path '/api/reports' -extra @{Headers=$websiteHeaders}
+Assert ($response.Status -eq 401) 'website cannot read reports without pairing code'
+$websiteHeaders.Authorization='Bearer '+$state.Token
+$response=Request -path '/api/reports' -extra @{Headers=$websiteHeaders}
+Assert ($response.Status -eq 200) 'paired website can read local reports'
+$response=Request -path '/' -extra @{Headers=$websiteHeaders}
+Assert ($response.Status -eq 403) 'website cannot fetch automatic session bootstrap'
+$response=Request OPTIONS '/api/reports' -extra @{Headers=$websiteHeaders;RemoteAddress='192.0.2.5'}
+Assert ($response.Status -eq 403) 'website preflight does not allow remote clients'
+$response=Request OPTIONS '/api/reports' -extra @{Headers=@{Host='127.0.0.1:8000';Origin='https://wshc.ganesh18.dpdns.org.evil.example'}}
+Assert ($response.Status -eq 403) 'website lookalike origin rejected'
 foreach($target in @('server01','server01.example.internal','10.0.0.15','2001:db8::10')) {Assert (Test-HealthTarget $target) "valid target $target"}
 foreach($target in @('server;whoami','../secret','https://server','-command','')) {
     $body=@{target=$target;username='LAB\test';password='dummy-secret'}|ConvertTo-Json -Compress

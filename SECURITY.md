@@ -12,4 +12,8 @@ The connection endpoint accepts validated hostnames/IPs, not commands or script 
 
 QFE history is not a compliance certification, TCP reachability is not proof of RDP login, and missing data is unknown. Review findings with an administrator. Shared HTTPS/domain hosting and target access must be validated in your environment.
 
-Never put real credentials, diagnostics or private screenshots in source, fixtures, issues or public hosting. Report vulnerabilities privately to the repository owner. The public static site is setup guidance and fictional UI preview only; it cannot run Windows PowerShell or connect to private servers.
+Never put real credentials, diagnostics or private screenshots in source, fixtures, issues or public hosting. Report vulnerabilities privately to the repository owner.
+
+The Cloudflare dashboard may pair with the loopback PowerShell service. CORS is restricted to the exact HTTPS origin `https://wshc.ganesh18.dpdns.org`, limited API routes, and loopback clients. A random per-process code must be entered manually; it is never disclosed through a cross-origin bootstrap endpoint. API requests still require the bearer code. Preflight responses grant no diagnostic access. Shared Windows-authenticated hosting does not enable website pairing. No wildcard origins, cloud diagnostic proxy, or public management listener is provided.
+
+The published JavaScript can see data entered into or returned to the dashboard. Protect GitHub write access and Cloudflare deployment permissions as privileged access to the diagnostics UI. No third-party analytics or scripts are included. Browser local-network permission and enterprise policies may block loopback requests; the same-origin localhost dashboard remains available.

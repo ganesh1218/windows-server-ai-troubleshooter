@@ -40,6 +40,11 @@ try {
     Write-Host "Server Health Check 2.0 - Windows PowerShell $($PSVersionTable.PSVersion)"
     Write-Host "Open $Prefix - keep this window open; press Ctrl+C to stop."
     Write-Host 'No Python, Node.js, package installation or model service is required.'
+    if (-not $AllowRemote) {
+        Write-Host 'Website: https://wshc.ganesh18.dpdns.org - pair using this session code:'
+        Write-Host $state.Token
+        Write-Host 'Keep this code private. Restarting PowerShell invalidates it.'
+    }
     if (-not $NoBrowser) {Start-Process $Prefix}
     while($listener.IsListening) {
         # Periodic waits let Ctrl+C stop an otherwise idle Windows PowerShell host.
@@ -63,6 +68,13 @@ try {
             $result=Invoke-HealthRequest -State $state -Request @{Method=$request.HttpMethod;Path=$request.Url.AbsolutePath;Headers=$headers;Body=$body;RemoteAddress=$request.RemoteEndPoint.Address.ToString();Identity=$identity;IsSecure=$request.IsSecureConnection}
             $response=$context.Response
             $response.StatusCode=$result.Status;$response.ContentType=$result.ContentType
+            if (-not $AllowRemote -and $request.Headers['Origin'] -eq 'https://wshc.ganesh18.dpdns.org' -and $request.Url.AbsolutePath -in @('/api/connect','/api/reports','/api/health') -and [Net.IPAddress]::IsLoopback($request.RemoteEndPoint.Address)) {
+                $response.Headers['Access-Control-Allow-Origin']='https://wshc.ganesh18.dpdns.org'
+                $response.Headers['Vary']='Origin'
+                $response.Headers['Access-Control-Allow-Methods']='GET, POST, OPTIONS'
+                $response.Headers['Access-Control-Allow-Headers']='Authorization, Content-Type'
+                $response.Headers['Access-Control-Allow-Private-Network']='true'
+            }
             $response.Headers['Cache-Control']='no-store'
             $response.Headers['X-Content-Type-Options']='nosniff'
             $response.Headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'"
