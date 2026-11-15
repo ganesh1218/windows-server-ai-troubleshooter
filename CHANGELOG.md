@@ -1,5 +1,13 @@
 # Release notes
 
+## GitHub launcher and connector 1.0.3
+
+- Added `launcher.py` to check GitHub main, show commit/diff review and apply approved fast-forward updates before starting the local connector.
+- Refuse dirty checkouts, unexpected origins, non-main branches and diverged/local-ahead history; retain an explicit offline mode.
+- Connector resolves bundled scripts correctly in both Git checkout and ZIP layouts.
+- Website setup now leads with GitHub clone/launcher instructions and keeps ZIP setup as an alternative.
+- Added local Git integration tests for approvals, declined updates, review-time edits and safety checks.
+
 ## Windows PowerShell child-process compatibility
 
 - Clear inherited PSModulePath only in the collector child process so Windows PowerShell 5.1 rebuilds compatible module paths instead of loading PowerShell 7 module/type files.

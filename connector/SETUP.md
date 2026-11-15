@@ -1,5 +1,13 @@
 # Windows Server Health Check — Python connector
 
+## GitHub checkout instead of ZIP
+
+Install Python 3.11+ and Git for Windows, then clone `https://github.com/ganesh1218/windows-server-health-check.git` on your management computer. In the cloned folder, run `py -3 launcher.py`. It checks GitHub `main`, shows updates and lets you review the full diff before approving a fast-forward update. The connector then runs locally. Nothing is copied to target servers.
+
+Future sessions use the same command. Use `--diagnose` for local readiness checks or `--offline` to explicitly skip the network update check. The launcher refuses dirty worktrees, divergent/local-ahead history, other branches and unexpected origins. It never discards edits or changes security policies. Only approve code you have reviewed; repository/ancestry checks are not a signature verification or security audit. Clone into a separate folder; the small ZIP below does not include Git history or the launcher.
+
+## ZIP setup
+
 1. Use a Windows management computer with network/VPN access to your servers.
 2. Install Python 3.11 or newer from https://www.python.org/downloads/windows/.
 3. Extract the complete connector ZIP to a trusted folder. Keep `connector.py` and the `scripts` folder together.
@@ -32,4 +40,4 @@ The connector clears inherited PSModulePath only for its Windows PowerShell chil
 
 ## Diagnose a repeated local failure
 
-Connector **1.0.2** prints its version at startup. In the extracted folder, run `py -3 connector.py --diagnose`. This checks only local commands, script parsing and file-trust markers. It does not ask for credentials, connect to any server, bind a port or change policy. Its output contains no passwords, session codes, hostnames or usernames and can be supplied for troubleshooting. Collection failures also include a safe exception type and script line where available. If you see only the older generic message, stop the old process and run the updated extracted package before retrying.
+Connector **1.0.3** prints its version at startup. In the extracted folder, run `py -3 connector.py --diagnose`. This checks only local commands, script parsing and file-trust markers. It does not ask for credentials, connect to any server, bind a port or change policy. Its output contains no passwords, session codes, hostnames or usernames and can be supplied for troubleshooting. Collection failures also include a safe exception type and script line where available. If you see only the older generic message, stop the old process and run the updated extracted package before retrying.
