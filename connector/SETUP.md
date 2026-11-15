@@ -30,6 +30,12 @@ The website now distinguishes blocked PowerShell scripts, invalid connector requ
 
 The connector clears inherited PSModulePath only for its Windows PowerShell child process. Windows PowerShell then rebuilds its own default module paths, avoiding incompatible PowerShell 7 modules. Your system/user environment, execution policy and installed modules are not changed.
 
+## Built-in script unblocking
+
+Connector **1.0.4** checks the three bundled PowerShell scripts for Windows downloaded-file markers on normal startup. If present, it lists the files and asks you to review and trust them. Enter `y` only if you trust them and organizational policy permits. The connector runs `Unblock-File -LiteralPath` only for those files, verifies the markers were removed, and continues. Entering anything else leaves them unchanged and stops startup.
+
+You can also run `py -3 connector.py --unblock` explicitly, then `py -3 connector.py --diagnose`. No execution policy, firewall rule or unrelated file is changed. Restricted and AllSigned policies still apply; unblocking does not replace required signatures. This action is available only in the local terminal, never through the website API. Diagnostic mode remains read-only and does not unblock anything.
+
 ## Diagnose a repeated local failure
 
-Connector **1.0.2** prints its version at startup. In the extracted folder, run `py -3 connector.py --diagnose`. This checks only local commands, script parsing and file-trust markers. It does not ask for credentials, connect to any server, bind a port or change policy. Its output contains no passwords, session codes, hostnames or usernames and can be supplied for troubleshooting. Collection failures also include a safe exception type and script line where available. If you see only the older generic message, stop the old process and run the updated extracted package before retrying.
+Connector **1.0.4** prints its version at startup. In the extracted folder, run `py -3 connector.py --diagnose`. This checks only local commands, script parsing and file-trust markers. It does not ask for credentials, connect to any server, bind a port or change policy. Its output contains no passwords, session codes, hostnames or usernames and can be supplied for troubleshooting. Collection failures also include a safe exception type and script line where available. If you see only the older generic message, stop the old process and run the updated extracted package before retrying.

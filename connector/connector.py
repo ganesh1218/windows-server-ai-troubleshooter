@@ -20,8 +20,9 @@ WEBSITE = 'https://wshc.ganesh18.dpdns.org'
 HOST, PORT = '127.0.0.1', 8000
 ROOT = Path(__file__).resolve().parent
 MAX_BODY = 16384
-VERSION = '1.0.2'
+VERSION = '1.0.4'
 API_PATHS = {'/api/health', '/api/reports', '/api/connect'}
+SCRIPT_NAMES = ('Invoke-HealthCheck.ps1', 'Collect-Diagnostics.ps1', 'Test-ConnectorEnvironment.ps1')
 COLLECTION_ERRORS = {
     'script_blocked': 'Windows blocked the bundled PowerShell scripts (script-signing, execution-policy or downloaded-file trust). Review the scripts and follow your organization\'s approved signing/unblocking process, then restart the connector. Do not disable your security policy.',
     'invalid_request': 'The connector could not read the diagnostic request. Update the connector from the website and restart it.',
@@ -229,6 +230,10 @@ class ConnectorHandler(BaseHTTPRequestHandler):
             self.reply(413, {'detail': 'Connection request is too large or empty.'})
             return
         if self.headers.get('Content-Type', '').split(';')[0].strip() != 'application/json':
+            try:
+                self.rfile.read(length)
+            except (OSError, socket.timeout):
+                pass
             self.reply(415, {'detail': 'Use application/json.'})
             return
         data = None
@@ -260,6 +265,66 @@ class ConnectorHandler(BaseHTTPRequestHandler):
             payload.clear()
 
 
+def bundled_scripts(root=ROOT):
+    """Resolve only the three known scripts; refuse paths outside the package."""
+    root = root.resolve()
+    scripts = (root / 'scripts').resolve()
+    if scripts.parent != root:
+        raise ValueError('Scripts directory is outside the connector folder')
+    paths = [(scripts / name).resolve() for name in SCRIPT_NAMES]
+    if any(path.parent != scripts or path.name != name or not path.is_file()
+           for path, name in zip(paths, SCRIPT_NAMES)):
+        raise ValueError('Complete bundled scripts are required')
+    return paths
+
+
+def downloaded_markers(paths):
+    marked = []
+    for path in paths:
+        try:
+            with open(str(path) + ':Zone.Identifier', 'rb'):
+                marked.append(path)
+        except FileNotFoundError:
+            pass
+    return marked
+
+
+def unblock_scripts(root=ROOT, confirm=input, output=print):
+    """Local terminal consent only; never exposed through the website API."""
+    try:
+        paths = bundled_scripts(root)
+        marked = downloaded_markers(paths)
+        if not marked:
+            output('The bundled scripts have no downloaded-file markers. Execution policy is unchanged.')
+            return True
+        output('Downloaded-file markers found on: ' + ', '.join(path.name for path in marked))
+        output('Review these bundled scripts before trusting them. Only their download markers will be removed.')
+        if confirm('Trust these scripts and unblock them where your organization permits? [y/N]: ').strip().lower() != 'y':
+            output('Not unblocked. No files or execution policy were changed.')
+            return False
+        command = ('$ErrorActionPreference="Stop"; '
+                   '[Console]::InputEncoding=[Text.UTF8Encoding]::new($false); '
+                   '$paths=[Console]::In.ReadToEnd() | ConvertFrom-Json; '
+                   'foreach($path in $paths){Unblock-File -LiteralPath $path -ErrorAction Stop}')
+        executable = Path(os.environ.get('SystemRoot', r'C:\Windows')) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
+        environment = {key: value for key, value in os.environ.items() if key.upper() != 'PSMODULEPATH'}
+        result = subprocess.run([str(executable), '-NoProfile', '-NonInteractive', '-Command', command],
+                                input=json.dumps([str(path) for path in marked], ensure_ascii=True).encode(),
+                                capture_output=True, timeout=30, check=False, env=environment,
+                                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        if result.returncode or downloaded_markers(paths):
+            output('Unblocking could not complete. Follow your organization\'s file-trust procedure. No execution policy was changed.')
+            return False
+        output('Bundled scripts unblocked. Execution policy is unchanged; Restricted/AllSigned policies still apply.')
+        return True
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        output('Cannot check or unblock the bundled scripts. Verify the complete extracted package and file permissions.')
+        return False
+    except (KeyboardInterrupt, EOFError):
+        output('Unblocking cancelled.')
+        return False
+
+
 def diagnose():
     """No target or credentials: check only the local Windows runtime/scripts."""
     executable = Path(os.environ.get('SystemRoot', r'C:\Windows')) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
@@ -287,11 +352,16 @@ def main():
         return 1
     if sys.argv[1:] == ['--diagnose']:
         return diagnose()
+    if sys.argv[1:] == ['--unblock']:
+        return 0 if unblock_scripts() else 1
     if sys.argv[1:]:
-        print('Usage: py -3 connector.py [--diagnose]')
+        print('Usage: py -3 connector.py [--diagnose | --unblock]')
         return 1
     if not all((ROOT / 'scripts' / name).is_file() for name in ('Invoke-HealthCheck.ps1', 'Collect-Diagnostics.ps1')):
         print('Extract the complete connector ZIP before starting it. Bundled collector scripts are missing.')
+        return 1
+    # Offer consent on normal startup only when Windows download markers exist.
+    if not unblock_scripts():
         return 1
     try:
         server = ConnectorServer()

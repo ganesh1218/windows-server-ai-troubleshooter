@@ -1,5 +1,11 @@
 # Release notes
 
+## Connector 1.0.4 — local script trust prompt
+
+- Detect Windows downloaded-file markers and offer explicit terminal confirmation before unblocking only the three bundled PowerShell scripts.
+- Added `--unblock`; execution policy and unrelated files remain unchanged. Diagnostic mode stays read-only.
+- Added real Windows file-marker tests for approval, declined consent, missing files and paths containing quotes/spaces.
+
 ## Windows PowerShell child-process compatibility
 
 - Clear inherited PSModulePath only in the collector child process so Windows PowerShell 5.1 rebuilds compatible module paths instead of loading PowerShell 7 module/type files.

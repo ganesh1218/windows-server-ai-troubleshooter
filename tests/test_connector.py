@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from connector.connector import ConnectorServer, WEBSITE, collect, process_failure
+from connector.connector import ConnectorServer, WEBSITE, collect, process_failure, SCRIPT_NAMES, unblock_scripts, downloaded_markers, bundled_scripts
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -162,6 +162,46 @@ class CollectorTests(unittest.TestCase):
             self.assertNotIn('private raw error', json.dumps(data))
 
 
+@unittest.skipUnless(sys.platform == 'win32', 'Windows downloaded-file markers require NTFS')
+class UnblockTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="connector trust '")
+        self.root = Path(self.temporary.name)
+        (self.root / 'scripts').mkdir()
+        for name in SCRIPT_NAMES:
+            path = self.root / 'scripts' / name
+            path.write_text('# harmless trust fixture\n')
+            Path(str(path) + ':Zone.Identifier').write_text('[ZoneTransfer]\nZoneId=3\n')
+        self.unrelated = self.root / 'scripts/unrelated.ps1'
+        self.unrelated.write_text('# must remain marked\n')
+        Path(str(self.unrelated) + ':Zone.Identifier').write_text('[ZoneTransfer]\nZoneId=3\n')
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def test_declining_does_not_run_commands_or_remove_markers(self):
+        with patch('connector.connector.subprocess.run') as run:
+            self.assertFalse(unblock_scripts(self.root, confirm=lambda _: 'n', output=lambda _: None))
+            run.assert_not_called()
+        self.assertEqual(len(downloaded_markers(bundled_scripts(self.root))), 3)
+
+    def test_approval_unblocks_only_allowlisted_files_with_literal_paths(self):
+        self.assertTrue(unblock_scripts(self.root, confirm=lambda _: 'y', output=lambda _: None))
+        self.assertFalse(downloaded_markers(bundled_scripts(self.root)))
+        self.assertTrue(downloaded_markers([self.unrelated]))
+        for name in SCRIPT_NAMES:
+            self.assertEqual((self.root / 'scripts' / name).read_text(), '# harmless trust fixture\n')
+        with patch('connector.connector.subprocess.run') as run:
+            self.assertTrue(unblock_scripts(self.root, confirm=lambda _: self.fail('No prompt expected'), output=lambda _: None))
+            run.assert_not_called()
+
+    def test_missing_script_never_triggers_unblocking(self):
+        (self.root / 'scripts' / SCRIPT_NAMES[0]).unlink()
+        with patch('connector.connector.subprocess.run') as run:
+            self.assertFalse(unblock_scripts(self.root, confirm=lambda _: 'y', output=lambda _: None))
+            run.assert_not_called()
+
+
 class PackageTests(unittest.TestCase):
     @unittest.skipUnless(sys.platform == 'win32', 'Built-in PowerShell readiness check requires Windows')
     def test_packaged_diagnostic_mode_needs_no_server_or_credentials(self):
@@ -178,7 +218,7 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout)
             output = result.stdout.decode()
             data = json.loads(output[output.index('{'):])
-            self.assertEqual(data['connectorVersion'], '1.0.2')
+            self.assertEqual(data['connectorVersion'], '1.0.4')
             self.assertEqual(next(item for item in data['checks'] if item['check'] == 'Collect-Diagnostics.ps1')['status'], 'parse-ok')
             self.assertNotIn(folder, output)
             self.assertNotIn('session code', output)

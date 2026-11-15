@@ -26,6 +26,8 @@ py -3 connector.py
 
 If `py` is unavailable, use `python connector.py`. No pip dependencies are required. Keep the terminal open; no separate PowerShell window is needed. The connector invokes built-in Windows PowerShell 5.1 in the background. See [connector/SETUP.md](connector/SETUP.md) for troubleshooting.
 
+Connector 1.0.4 detects downloaded-file markers on its three bundled PowerShell scripts and offers to unblock them in the local terminal. Review and confirm only if you trust those scripts and your organization permits it. It runs literal-path `Unblock-File` commands only for those files; execution policy is unchanged. You can also run `py -3 connector.py --unblock` explicitly. Restricted/AllSigned policies still apply, and `--diagnose` remains read-only.
+
 4. Open **https://wshc.ganesh18.dpdns.org**, enter the server name/IP and click **Continue to authentication**. The website checks for the connector.
 5. Pair using its printed session code, enter your Windows credentials and click **Connect & check health**. Allow local network access if your browser requests it. Results stay on the website; no page redirect is needed.
 

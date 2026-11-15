@@ -24,4 +24,4 @@ foreach($name in @('Invoke-HealthCheck.ps1','Collect-Diagnostics.ps1')) {
     } catch {$checks+=@{check=($name+' downloaded-file marker');status='unknown'}}
 }
 try {$policy=[string](Get-ExecutionPolicy -ErrorAction Stop)}catch{$policy='Unknown'}
-@{connectorVersion='1.0.2';powershellVersion=$PSVersionTable.PSVersion.ToString();executionPolicy=$policy;checks=$checks} | ConvertTo-Json -Depth 5 -Compress
+@{connectorVersion='1.0.4';powershellVersion=$PSVersionTable.PSVersion.ToString();executionPolicy=$policy;checks=$checks} | ConvertTo-Json -Depth 5 -Compress
