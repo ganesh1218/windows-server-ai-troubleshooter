@@ -178,7 +178,7 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout)
             output = result.stdout.decode()
             data = json.loads(output[output.index('{'):])
-            self.assertEqual(data['connectorVersion'], '1.0.3')
+            self.assertEqual(data['connectorVersion'], '1.0.2')
             self.assertEqual(next(item for item in data['checks'] if item['check'] == 'Collect-Diagnostics.ps1')['status'], 'parse-ok')
             self.assertNotIn(folder, output)
             self.assertNotIn('session code', output)

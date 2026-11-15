@@ -19,11 +19,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 WEBSITE = 'https://wshc.ganesh18.dpdns.org'
 HOST, PORT = '127.0.0.1', 8000
 ROOT = Path(__file__).resolve().parent
-# ZIP packages put scripts beside connector.py; Git checkouts keep them at root.
-if not (ROOT / 'scripts').is_dir() and (ROOT.parent / 'launcher.py').is_file():
-    ROOT = ROOT.parent
 MAX_BODY = 16384
-VERSION = '1.0.3'
+VERSION = '1.0.2'
 API_PATHS = {'/api/health', '/api/reports', '/api/connect'}
 COLLECTION_ERRORS = {
     'script_blocked': 'Windows blocked the bundled PowerShell scripts (script-signing, execution-policy or downloaded-file trust). Review the scripts and follow your organization\'s approved signing/unblocking process, then restart the connector. Do not disable your security policy.',

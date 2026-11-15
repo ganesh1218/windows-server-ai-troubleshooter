@@ -16,24 +16,6 @@ ServerScope provides a browser dashboard for read-only Windows Server diagnostic
 
 ## Use the website as your dashboard
 
-### GitHub launcher (recommended)
-
-Install [Python 3.11+ for Windows](https://www.python.org/downloads/windows/) and [Git for Windows](https://git-scm.com/install/windows) once. On your **management computer**, run:
-
-```powershell
-git clone https://github.com/ganesh1218/windows-server-health-check.git
-cd windows-server-health-check
-py -3 launcher.py
-```
-
-For future sessions, run `py -3 launcher.py` in that checkout. The launcher checks the exact expected origin, branch `main` and a clean checkout, then fetches GitHub `main`. If an update exists it shows the candidate commit, commit summaries and changed-file statistics. Press **r** to review the full diff, **y** to apply the displayed fast-forward update, or Enter to keep the current version. No automatic approval, reset, rebase, discarded edits or background hot update occurs. These checks verify repository/commit consistency; they are not a code-signing or security audit of changes. Review code before approval.
-
-The launcher starts the connector locally with the current Python interpreter. Keep its terminal open. Visit the website, enter your server/IP, pair using its printed code, enter Windows credentials and check health. Nothing is copied to target servers. The private session code authorizes website-to-localhost access and remains separate from Windows authentication.
-
-Use `py -3 launcher.py --diagnose` for local readiness checks, or `py -3 launcher.py --offline` to explicitly use a clean current checkout without contacting GitHub. If local files are changed, history diverged or `origin` differs, the launcher stops for manual review. Existing ZIP folders are not Git checkouts: clone once into a separate folder rather than overwriting them.
-
-### ZIP connector (without Git)
-
 1. Install [Python for Windows](https://www.python.org/downloads/windows/) version 3.11 or newer.
 2. [Download the Python connector](https://wshc.ganesh18.dpdns.org/downloads/windows-server-health-check-connector.zip) and extract it. Keep `connector.py` and its `scripts` folder together.
 3. Open a terminal in the extracted folder and run:
@@ -49,7 +31,7 @@ If `py` is unavailable, use `python connector.py`. No pip dependencies are requi
 
 The browser sends diagnostic requests directly to `http://127.0.0.1:8000`, never to Cloudflare. The service permits only this exact website origin and requires its random per-process session code. Codes and credentials are not saved in browser storage. Restarting invalidates the code and clears snapshots. Browsers or enterprise policies may block HTTPS-to-loopback connections; Python does not bypass that policy. The optional PowerShell dashboard below provides a same-origin alternative. Stop either host before starting the other; both use port 8000. Automatic startup is not configured.
 
-Push changes to GitHub **main** to update the public website automatically through Cloudflare Pages. Its build regenerates the connector ZIP and SHA-256 checksum from an explicit list of public source files, so the downloadable package matches that deployment. Other branches are not production deployments. Wait for the build to succeed. For local updates, restart the GitHub launcher and review/apply its proposed update, or replace the ZIP package manually. A website deployment does not replace code in a running local process.
+Push changes to GitHub **main** to update the public website automatically through Cloudflare Pages. Its build regenerates the connector ZIP and SHA-256 checksum from an explicit list of public source files, so the downloadable package matches that deployment. Other branches are not production deployments. Wait for the build to succeed. Existing local connectors are not updated remotely: obtain the updated package, stop the old process and restart when connector code changes.
 
 ## Local dashboard fallback
 
@@ -187,7 +169,6 @@ Real WinRM/DCOM connections and shared HTTPS/domain authentication require your 
 | `tests/` | JavaScript and Windows PowerShell tests |
 
 | `connector/` | Local Python connector and setup instructions |
-| `launcher.py` | Reviewed fast-forward GitHub updates and local connector startup |
 | `scripts/package-connector.mjs` | Builds the public connector ZIP and checksum during website builds |
 
 [MIT License](LICENSE). Provided without warranty.
